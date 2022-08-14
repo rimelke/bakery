@@ -2,6 +2,6 @@ const App = () => (
   <div>
     <p>oisss</p>
   </div>
-);
+)
 
-export default App;
+export default App

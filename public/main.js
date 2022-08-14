@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow } = require('electron')
 
 const main = () => {
   const win = new BrowserWindow({
@@ -6,12 +6,12 @@ const main = () => {
     height: 600,
     show: false,
     webPreferences: {
-      nodeIntegration: true,
-    },
-  });
+      nodeIntegration: true
+    }
+  })
 
-  win.loadURL("http://localhost:3000");
-  win.once("ready-to-show", win.show);
-};
+  win.loadURL('http://localhost:3000')
+  win.once('ready-to-show', win.show)
+}
 
-app.whenReady().then(main);
+app.whenReady().then(main)
