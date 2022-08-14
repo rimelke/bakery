@@ -2,6 +2,7 @@
   "name": "bakery",
   "version": "0.1.0",
   "private": true,
+  "main": "public/main.js",
   "dependencies": {
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^13.0.0",
@@ -17,10 +18,10 @@
     "web-vitals": "^2.1.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "dev:react": "react-scripts start",
+    "dev:electron": "wait-on tcp:3000 && electron .",
+    "dev": "npm-run-all --parallel dev:*",
+    "build": "react-scripts build"
   },
   "eslintConfig": {
     "extends": [
@@ -39,5 +40,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^20.0.2",
+    "npm-run-all": "^4.1.5",
+    "wait-on": "^6.0.1"
   }
 }
