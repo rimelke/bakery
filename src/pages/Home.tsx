@@ -1,8 +1,15 @@
 import { useEffect } from 'react'
+import api from '../services/api'
 
 const Home = () => {
   useEffect(() => {
-    console.log('useEffect')
+    const main = async () => {
+      const products = await api.getProducts()
+
+      console.log('products', products)
+    }
+
+    main()
   }, [])
 
   return (

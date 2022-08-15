@@ -1,5 +1,9 @@
-const { app, BrowserWindow } = require('electron')
-const path = require('path')
+import { app, BrowserWindow } from 'electron'
+import path from 'path'
+import electronReload from 'electron-reload'
+import { initHandlers } from './handlers'
+
+electronReload(__dirname, {})
 
 const main = () => {
   const win = new BrowserWindow({
@@ -8,7 +12,7 @@ const main = () => {
     show: false,
     webPreferences: {
       nodeIntegration: true,
-      preload: path.resolve(__dirname, 'fon.js')
+      preload: path.resolve(__dirname, 'preload.js')
     }
   })
 
@@ -16,6 +20,8 @@ const main = () => {
 
   win.loadURL('http://localhost:3000')
   win.once('ready-to-show', win.show)
+
+  initHandlers()
 }
 
 app.whenReady().then(main)

@@ -2,7 +2,7 @@
   "name": "bakery",
   "version": "0.1.0",
   "private": true,
-  "main": "public/main.js",
+  "main": "dist/main.js",
   "dependencies": {
     "@chakra-ui/react": "^2.2.8",
     "@emotion/react": "^11.10.0",
@@ -15,6 +15,7 @@
     "@types/node": "^16.7.13",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "electron-reload": "^2.0.0-alpha.1",
     "framer-motion": "^7.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -24,7 +25,8 @@
   },
   "scripts": {
     "dev:react": "cross-env BROWSER=none react-scripts start",
-    "dev:electron": "wait-on http://localhost:3000 && electron .",
+    "dev:electron-build": "tsc -w --project tsconfig.electron.json",
+    "dev:electron-compile": "wait-on http://localhost:3000 && electron .",
     "dev": "npm-run-all --parallel dev:*",
     "migrate:dev": "prisma migrate dev",
     "build": "react-scripts build"
