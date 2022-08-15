@@ -1,7 +1,10 @@
+import { ChakraProvider } from '@chakra-ui/react'
+import Routes from './Routes'
+
 const App = () => (
-  <div>
-    <p>oisss</p>
-  </div>
+  <ChakraProvider>
+    <Routes />
+  </ChakraProvider>
 )
 
 export default App
