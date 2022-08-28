@@ -1,3 +1,5 @@
+import { products as Product } from '@prisma/client'
+import normalizeString from '../../utils/normalizeString'
 import prisma from '../prisma'
 
 export const getProducts = async () => {
@@ -15,9 +17,13 @@ export const getProduct = async (search: string | number) => {
     if (codeProduct) return codeProduct
   }
 
-  const products = await prisma.products.findMany({
-    where: { name: { contains: search.toString() } }
-  })
+  const products = await prisma.$queryRaw<
+    Product[]
+  >`SELECT * FROM "products" WHERE "name" LIKE ${`%${normalizeString(
+    search.toString()
+  )
+    .split('')
+    .join('%')}%`} ORDER BY "code"`
 
   return products
 }

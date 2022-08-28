@@ -1,9 +1,16 @@
 import {
+  Box,
   Flex,
   FormControl,
   FormLabel,
   Input,
   InputProps,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
   Table,
   Tbody,
   Td,
@@ -17,6 +24,8 @@ import {
   forwardRef,
   ForwardRefRenderFunction,
   KeyboardEventHandler,
+  RefObject,
+  useImperativeHandle,
   useRef,
   useState
 } from 'react'
@@ -61,18 +70,107 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
   NumberInputWithRef
 )
 
+interface SearchModalRef {
+  openModal: (products: Product[]) => void
+}
+
+interface SearchModalProps {
+  inputRef: RefObject<HTMLInputElement>
+}
+
+const SearchModalWithRef: ForwardRefRenderFunction<
+  SearchModalRef,
+  SearchModalProps
+> = ({ inputRef }, ref) => {
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [searchProducts, setSearchProducts] = useState<Product[]>([])
+  const [selectedId, setSelectedId] = useState<string>()
+
+  const selectedRowRef = useRef<HTMLTableRowElement>(null)
+
+  const handleSearchClose = () => {
+    setIsSearchOpen(false)
+  }
+
+  const openModal = (products: Product[]) => {
+    setSearchProducts(products)
+    setSelectedId(products[0]?.id)
+    setIsSearchOpen(true)
+    selectedRowRef.current?.focus()
+  }
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      openModal
+    }),
+    []
+  )
+
+  return (
+    <Modal
+      finalFocusRef={inputRef}
+      isOpen={isSearchOpen}
+      onClose={handleSearchClose}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Busca de produtos</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <Box
+            borderWidth="2px"
+            borderColor="gray.100"
+            borderRadius="md"
+            overflow="hidden">
+            <Table>
+              <Thead bg="gray.100">
+                <Tr>
+                  <Th isNumeric>Cód.</Th>
+                  <Th>Nome</Th>
+                  <Th isNumeric>Preço</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {searchProducts.map((product) => (
+                  <Tr
+                    ref={selectedId === product.id ? selectedRowRef : undefined}
+                    bg={selectedId === product.id ? 'cyan.100' : undefined}
+                    key={product.id}>
+                    <Td isNumeric>{product.code}</Td>
+                    <Td>{product.name}</Td>
+                    <Td isNumeric>
+                      {product.price.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  )
+}
+
+const SearchModal = forwardRef<SearchModalRef, SearchModalProps>(
+  SearchModalWithRef
+)
+
 const Home = () => {
   const [items, setItems] = useState<IOrderItem[]>([])
 
   const codeRef = useRef(1)
   const inputRef = useRef<HTMLInputElement>(null)
   const amountRef = useRef<HTMLInputElement>(null)
+  const searchModalRef = useRef<SearchModalRef>(null)
 
   const focusInput = () => {
     if (!inputRef.current) return
 
     inputRef.current.focus()
-    inputRef.current.select()
   }
 
   const clearFields = () => {
@@ -130,7 +228,7 @@ const Home = () => {
     )
 
     if (result instanceof Array) {
-      console.log(result)
+      searchModalRef.current?.openModal(result)
 
       return
     }
@@ -151,10 +249,14 @@ const Home = () => {
       '*': focusAmount,
       ArrowDown: focusAmount,
       Escape: clearFields,
-      ArrowUp: focusInput
+      ArrowUp: focusInput,
+      F2: () => searchModalRef.current?.openModal([])
     }
 
-    if (!actions[e.key]) return
+    if (!actions[e.key]) {
+      console.log(e.key)
+      return
+    }
 
     e.preventDefault()
     actions[e.key]()
@@ -164,6 +266,8 @@ const Home = () => {
 
   return (
     <Flex bg="gray.200" h="100vh" justifyContent="space-between" gap={8} p={8}>
+      <SearchModal ref={searchModalRef} inputRef={inputRef} />
+
       <Flex flexDir="column" flex={1}>
         <Table bg="white" borderRadius="md" overflow="hidden">
           <Thead bg="gray.100">
@@ -225,6 +329,7 @@ const Home = () => {
               ref={inputRef}
               bg="white"
               textAlign="end"
+              onFocus={() => inputRef.current?.select()}
               autoFocus
               onKeyDown={keyDownHandler}
             />
@@ -237,7 +342,6 @@ const Home = () => {
               textAlign="end"
               ref={amountRef}
               bg="white"
-              autoFocus
               onKeyDown={keyDownHandler}
             />
           </FormControl>

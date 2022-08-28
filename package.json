@@ -2,7 +2,7 @@
   "name": "bakery",
   "version": "0.1.0",
   "private": true,
-  "main": "dist/main.js",
+  "main": "dist/electron/main.js",
   "dependencies": {
     "@chakra-ui/react": "^2.2.8",
     "@emotion/react": "^11.10.0",
