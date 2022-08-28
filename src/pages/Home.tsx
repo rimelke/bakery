@@ -71,32 +71,39 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
 )
 
 interface SearchModalRef {
-  openModal: (products: Product[]) => void
+  openModal: (search: string, products: Product[]) => void
 }
 
 interface SearchModalProps {
   inputRef: RefObject<HTMLInputElement>
+  handleAddProduct: (product: Product) => void
 }
 
 const SearchModalWithRef: ForwardRefRenderFunction<
   SearchModalRef,
   SearchModalProps
-> = ({ inputRef }, ref) => {
+> = ({ inputRef, handleAddProduct }, ref) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchProducts, setSearchProducts] = useState<Product[]>([])
   const [selectedId, setSelectedId] = useState<string>()
 
-  const selectedRowRef = useRef<HTMLTableRowElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const usedSearchRef = useRef('')
 
   const handleSearchClose = () => {
     setIsSearchOpen(false)
   }
 
-  const openModal = (products: Product[]) => {
+  const handleNewSearch = (search: string, products: Product[]) => {
+    usedSearchRef.current = search
+
     setSearchProducts(products)
     setSelectedId(products[0]?.id)
+  }
+
+  const openModal = (search: string, products: Product[]) => {
+    handleNewSearch(search, products)
     setIsSearchOpen(true)
-    selectedRowRef.current?.focus()
   }
 
   useImperativeHandle(
@@ -107,8 +114,50 @@ const SearchModalWithRef: ForwardRefRenderFunction<
     []
   )
 
+  const selectedProductIndex = searchProducts.findIndex(
+    (product) => product.id === selectedId
+  )
+
+  const handleSubmit = async () => {
+    const newSearch = searchRef.current?.value || ''
+
+    if (newSearch === usedSearchRef.current) {
+      if (selectedProductIndex > -1) {
+        handleSearchClose()
+        handleAddProduct(searchProducts[selectedProductIndex])
+      }
+
+      return
+    }
+
+    const result = await api.products.getProduct(newSearch)
+    handleNewSearch(newSearch, result instanceof Array ? result : [result])
+  }
+
+  const selectProduct = (offset: number) => {
+    const newSelectedProduct = searchProducts[selectedProductIndex + offset]
+
+    if (!newSelectedProduct) return
+
+    setSelectedId(newSelectedProduct.id)
+  }
+
+  const keyDownHandler: KeyboardEventHandler<HTMLInputElement> = (e) => {
+    const actions: Record<string, () => void> = {
+      Enter: handleSubmit,
+      ArrowDown: () => selectProduct(1),
+      ArrowUp: () => selectProduct(-1)
+    }
+
+    if (!actions[e.key]) return
+
+    e.preventDefault()
+    actions[e.key]()
+  }
+
   return (
     <Modal
+      initialFocusRef={searchRef}
       finalFocusRef={inputRef}
       isOpen={isSearchOpen}
       onClose={handleSearchClose}>
@@ -116,8 +165,15 @@ const SearchModalWithRef: ForwardRefRenderFunction<
       <ModalContent>
         <ModalHeader>Busca de produtos</ModalHeader>
         <ModalCloseButton />
-        <ModalBody>
+        <ModalBody pb={4}>
+          <Input
+            onFocus={() => searchRef.current?.select()}
+            defaultValue={usedSearchRef.current}
+            onKeyDown={keyDownHandler}
+            ref={searchRef}
+          />
           <Box
+            mt={4}
             borderWidth="2px"
             borderColor="gray.100"
             borderRadius="md"
@@ -133,7 +189,6 @@ const SearchModalWithRef: ForwardRefRenderFunction<
               <Tbody>
                 {searchProducts.map((product) => (
                   <Tr
-                    ref={selectedId === product.id ? selectedRowRef : undefined}
                     bg={selectedId === product.id ? 'cyan.100' : undefined}
                     key={product.id}>
                     <Td isNumeric>{product.code}</Td>
@@ -171,6 +226,7 @@ const Home = () => {
     if (!inputRef.current) return
 
     inputRef.current.focus()
+    inputRef.current.select()
   }
 
   const clearFields = () => {
@@ -215,11 +271,9 @@ const Home = () => {
 
     const rawSearch = inputRef.current.value
 
-    if (!rawSearch) {
-      focusInput()
+    focusInput()
 
-      return
-    }
+    if (!rawSearch) return
 
     const numberSearch = Number(rawSearch)
 
@@ -228,7 +282,7 @@ const Home = () => {
     )
 
     if (result instanceof Array) {
-      searchModalRef.current?.openModal(result)
+      searchModalRef.current?.openModal(rawSearch, result)
 
       return
     }
@@ -250,7 +304,7 @@ const Home = () => {
       ArrowDown: focusAmount,
       Escape: clearFields,
       ArrowUp: focusInput,
-      F2: () => searchModalRef.current?.openModal([])
+      F2: () => searchModalRef.current?.openModal('', [])
     }
 
     if (!actions[e.key]) {
@@ -266,7 +320,11 @@ const Home = () => {
 
   return (
     <Flex bg="gray.200" h="100vh" justifyContent="space-between" gap={8} p={8}>
-      <SearchModal ref={searchModalRef} inputRef={inputRef} />
+      <SearchModal
+        ref={searchModalRef}
+        inputRef={inputRef}
+        handleAddProduct={handleAddProduct}
+      />
 
       <Flex flexDir="column" flex={1}>
         <Table bg="white" borderRadius="md" overflow="hidden">
@@ -329,7 +387,6 @@ const Home = () => {
               ref={inputRef}
               bg="white"
               textAlign="end"
-              onFocus={() => inputRef.current?.select()}
               autoFocus
               onKeyDown={keyDownHandler}
             />
