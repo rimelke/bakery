@@ -11,6 +11,9 @@ datasource db {
 }
 
 model products {
-  id   String @id
-  name String
+  id           String  @id
+  name         String
+  code         Int     @unique
+  price        Float
+  isFractioned Boolean
 }
