@@ -475,14 +475,6 @@ const Home = () => {
           <Tbody>
             {items.map((item) => (
               <Tr
-                cursor="pointer"
-                onClick={(e) => {
-                  if (!tableRef.current) return
-
-                  e.preventDefault()
-                  setSelectedCode(item.code)
-                  tableRef.current.focus()
-                }}
                 key={item.code}
                 bg={selectedCode === item.code ? 'cyan.100' : undefined}>
                 <Td px={4} py={2} isNumeric>
