@@ -1,5 +1,12 @@
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Box,
+  Button,
   Flex,
   FormControl,
   FormLabel,
@@ -183,14 +190,88 @@ const SearchModal = forwardRef<SearchModalRef, SearchModalProps>(
   SearchModalWithRef
 )
 
+interface DeleteDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  focusTable: (useSelectedIndex?: boolean) => void
+  focusInput: () => void
+  item?: IOrderItem
+  deleteItem: (code: number) => void
+}
+
+const DeleteDialog = ({
+  isOpen,
+  onClose,
+  deleteItem,
+  item,
+  focusInput,
+  focusTable
+}: DeleteDialogProps) => {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const deleteRef = useRef<HTMLButtonElement>(null)
+
+  const handleCancel = () => {
+    onClose()
+    focusTable(true)
+  }
+
+  if (!item) return <></>
+
+  return (
+    <AlertDialog
+      leastDestructiveRef={cancelRef}
+      trapFocus={false}
+      returnFocusOnClose
+      isOpen={isOpen}
+      onClose={handleCancel}>
+      <AlertDialogOverlay>
+        <AlertDialogContent>
+          <AlertDialogHeader>Apagar item</AlertDialogHeader>
+          <AlertDialogBody>Fon</AlertDialogBody>
+          <AlertDialogFooter>
+            <Button
+              autoFocus
+              onKeyDown={(e) =>
+                e.key === 'ArrowRight' && deleteRef.current?.focus()
+              }
+              tabIndex={0}
+              ref={cancelRef}
+              onClick={handleCancel}>
+              Cancelar
+            </Button>
+            <Button
+              onKeyDown={(e) =>
+                e.key === 'ArrowLeft' && cancelRef.current?.focus()
+              }
+              tabIndex={1}
+              ref={deleteRef}
+              colorScheme="red"
+              onClick={() => {
+                deleteItem(item.code)
+                onClose()
+                focusInput()
+              }}
+              ml={3}>
+              Apagar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogOverlay>
+    </AlertDialog>
+  )
+}
+
 const Home = () => {
   const [items, setItems] = useState<IOrderItem[]>([])
+  const [selectedCode, setSelectedCode] = useState<number>()
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
   const codeRef = useRef(1)
   const inputRef = useRef<HTMLInputElement>(null)
   const amountRef = useRef<NumberInputRef>(null)
   const searchModalRef = useRef<SearchModalRef>(null)
   const productRef = useRef<Product>()
+  const tableRef = useRef<HTMLTableElement>(null)
 
   const focusInput = () => {
     if (!inputRef.current) return
@@ -204,6 +285,7 @@ const Home = () => {
     if (amountRef.current) amountRef.current.setValue()
     productRef.current = undefined
 
+    setSelectedCode(undefined)
     focusInput()
   }
 
@@ -265,6 +347,19 @@ const Home = () => {
     handleAddProduct(result)
   }
 
+  const selectedItemIndex =
+    selectedCode && items.findIndex((item) => item.code === selectedCode)
+  const selectedItem = selectedItemIndex ? items[selectedItemIndex] : undefined
+
+  const focusTable = (useSelectedIndex = false) => {
+    const usedIndex = (useSelectedIndex && selectedItemIndex) || 0
+
+    if (!tableRef.current || items.length <= usedIndex) return
+
+    setSelectedCode(items[usedIndex].code)
+    tableRef.current.focus()
+  }
+
   const keyDownHandler: KeyboardEventHandler<HTMLInputElement> = (e) => {
     const focusAmount = () => {
       if (!amountRef.current) return
@@ -279,7 +374,11 @@ const Home = () => {
       ArrowDown: focusAmount,
       Escape: clearFields,
       ArrowUp: focusInput,
-      F2: () => searchModalRef.current?.openModal('', [])
+      ArrowLeft: focusTable,
+      F2: () => searchModalRef.current?.openModal('', []),
+      F5: focusTable,
+      Delete: focusTable,
+      Tab: () => {}
     }
 
     if (!actions[e.key]) {
@@ -289,6 +388,41 @@ const Home = () => {
 
     e.preventDefault()
     actions[e.key]()
+  }
+
+  const selectItem = (offset: number) => {
+    if (typeof selectedItemIndex !== 'number') return
+
+    const newSelectedItem = items[selectedItemIndex + offset]
+
+    if (!newSelectedItem) return
+
+    setSelectedCode(newSelectedItem.code)
+  }
+
+  const tableKeyDownHandler: KeyboardEventHandler<HTMLTableElement> = (e) => {
+    const openDelete = () => {
+      setIsDeleteOpen(true)
+    }
+
+    const actions: Record<string, () => void> = {
+      Enter: openDelete,
+      Delete: openDelete,
+      Escape: clearFields,
+      ArrowRight: clearFields,
+      F5: clearFields,
+      ArrowDown: () => selectItem(1),
+      ArrowUp: () => selectItem(-1)
+    }
+
+    if (!actions[e.key]) return
+
+    e.preventDefault()
+    actions[e.key]()
+  }
+
+  const deleteItem = (code: number) => {
+    setItems((prevItems) => prevItems.filter((item) => item.code !== code))
   }
 
   const total = items.reduce((acc, item) => acc + item.subtotal, 0)
@@ -301,8 +435,24 @@ const Home = () => {
         handleAddProduct={handleAddProduct}
       />
 
+      <DeleteDialog
+        deleteItem={deleteItem}
+        item={selectedItem}
+        focusTable={focusTable}
+        focusInput={focusInput}
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+      />
+
       <Flex flexDir="column" flex={1}>
-        <Table bg="white" borderRadius="md" overflow="hidden">
+        <Table
+          onKeyDown={tableKeyDownHandler}
+          tabIndex={0}
+          ref={tableRef}
+          outline="none"
+          bg="white"
+          borderRadius="md"
+          overflow="hidden">
           <Thead bg="gray.100">
             <Tr>
               <Th px={4} py={2} isNumeric>
@@ -324,7 +474,17 @@ const Home = () => {
           </Thead>
           <Tbody>
             {items.map((item) => (
-              <Tr key={item.code}>
+              <Tr
+                cursor="pointer"
+                onClick={(e) => {
+                  if (!tableRef.current) return
+
+                  e.preventDefault()
+                  setSelectedCode(item.code)
+                  tableRef.current.focus()
+                }}
+                key={item.code}
+                bg={selectedCode === item.code ? 'cyan.100' : undefined}>
                 <Td px={4} py={2} isNumeric>
                   {item.code}
                 </Td>
@@ -359,6 +519,7 @@ const Home = () => {
           <FormControl>
             <FormLabel>Produto</FormLabel>
             <Input
+              onClick={clearFields}
               ref={inputRef}
               bg="white"
               textAlign="end"
@@ -369,6 +530,7 @@ const Home = () => {
           <FormControl>
             <FormLabel>Quantidade</FormLabel>
             <NumberInput
+              onClick={clearFields}
               placeholder="1,000"
               precision={3}
               textAlign="end"
