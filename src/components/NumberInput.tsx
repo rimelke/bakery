@@ -34,6 +34,7 @@ const CustomInput = forwardRef(CustomInputWithRef)
 export interface NumberInputRef {
   setValue: (value?: number) => void
   focus: () => void
+  select: () => void
 }
 
 interface NumberInputProps extends InputProps {
@@ -51,7 +52,8 @@ const NumberInputWithRef: ForwardRefRenderFunction<
     ref,
     () => ({
       setValue: (newValue) => setValue(newValue || ''),
-      focus: () => inputRef.current?.focus()
+      focus: () => inputRef.current?.focus(),
+      select: () => inputRef.current?.select()
     }),
     []
   )

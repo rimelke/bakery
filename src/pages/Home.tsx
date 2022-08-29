@@ -270,7 +270,7 @@ const Home = () => {
       if (!amountRef.current) return
 
       amountRef.current.focus()
-      // amountRef.current.select()
+      amountRef.current.select()
     }
 
     const actions: Record<string, () => void> = {
