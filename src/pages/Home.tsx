@@ -4,7 +4,6 @@ import {
   FormControl,
   FormLabel,
   Input,
-  InputProps,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -24,12 +23,11 @@ import {
   forwardRef,
   ForwardRefRenderFunction,
   KeyboardEventHandler,
-  RefObject,
   useImperativeHandle,
   useRef,
   useState
 } from 'react'
-import NumberFormat from 'react-number-format'
+import NumberInput, { NumberInputRef } from '../components/NumberInput'
 import api from '../services/api'
 
 interface IOrderItem {
@@ -39,50 +37,19 @@ interface IOrderItem {
   product: Product
 }
 
-interface NumberInputProps extends InputProps {
-  precision?: number
-}
-
-const NumberInputWithRef: ForwardRefRenderFunction<any, NumberInputProps> = (
-  { precision = 2, onKeyDown = () => {}, ...props },
-  ref
-) => (
-  <NumberFormat
-    customInput={(customProps: any) => (
-      <Input
-        {...props}
-        ref={ref}
-        {...customProps}
-        onKeyDown={(e) => {
-          customProps.onKeyDown(e)
-          onKeyDown(e)
-        }}
-      />
-    )}
-    decimalScale={precision}
-    decimalSeparator=","
-    fixedDecimalScale
-    autoComplete="off"
-  />
-)
-
-const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
-  NumberInputWithRef
-)
-
 interface SearchModalRef {
   openModal: (search: string, products: Product[]) => void
 }
 
 interface SearchModalProps {
-  inputRef: RefObject<HTMLInputElement>
   handleAddProduct: (product: Product) => void
+  focusInput: () => void
 }
 
 const SearchModalWithRef: ForwardRefRenderFunction<
   SearchModalRef,
   SearchModalProps
-> = ({ inputRef, handleAddProduct }, ref) => {
+> = ({ handleAddProduct, focusInput }, ref) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchProducts, setSearchProducts] = useState<Product[]>([])
   const [selectedId, setSelectedId] = useState<string>()
@@ -92,6 +59,7 @@ const SearchModalWithRef: ForwardRefRenderFunction<
 
   const handleSearchClose = () => {
     setIsSearchOpen(false)
+    focusInput()
   }
 
   const handleNewSearch = (search: string, products: Product[]) => {
@@ -157,8 +125,8 @@ const SearchModalWithRef: ForwardRefRenderFunction<
 
   return (
     <Modal
-      initialFocusRef={searchRef}
-      finalFocusRef={inputRef}
+      returnFocusOnClose={false}
+      trapFocus={false}
       isOpen={isSearchOpen}
       onClose={handleSearchClose}>
       <ModalOverlay />
@@ -167,6 +135,7 @@ const SearchModalWithRef: ForwardRefRenderFunction<
         <ModalCloseButton />
         <ModalBody pb={4}>
           <Input
+            autoFocus
             onFocus={() => searchRef.current?.select()}
             defaultValue={usedSearchRef.current}
             onKeyDown={keyDownHandler}
@@ -219,8 +188,9 @@ const Home = () => {
 
   const codeRef = useRef(1)
   const inputRef = useRef<HTMLInputElement>(null)
-  const amountRef = useRef<HTMLInputElement>(null)
+  const amountRef = useRef<NumberInputRef>(null)
   const searchModalRef = useRef<SearchModalRef>(null)
+  const productRef = useRef<Product>()
 
   const focusInput = () => {
     if (!inputRef.current) return
@@ -231,7 +201,8 @@ const Home = () => {
 
   const clearFields = () => {
     if (inputRef.current) inputRef.current.value = ''
-    if (amountRef.current) amountRef.current.value = ''
+    if (amountRef.current) amountRef.current.setValue()
+    productRef.current = undefined
 
     focusInput()
   }
@@ -250,11 +221,13 @@ const Home = () => {
   }
 
   const handleAddProduct = (product: Product) => {
-    if (!amountRef.current) return
+    if (!amountRef.current || !inputRef.current) return
 
-    const amountRawValue = amountRef.current.value
+    const amountRawValue = '1'
 
     if (product.isFractioned && !amountRawValue) {
+      productRef.current = product
+      inputRef.current.value = product.name
       amountRef.current.focus()
 
       return
@@ -277,9 +250,11 @@ const Home = () => {
 
     const numberSearch = Number(rawSearch)
 
-    const result = await api.products.getProduct(
-      isNaN(numberSearch) ? rawSearch : numberSearch
-    )
+    const result =
+      productRef.current ||
+      (await api.products.getProduct(
+        isNaN(numberSearch) ? rawSearch : numberSearch
+      ))
 
     if (result instanceof Array) {
       searchModalRef.current?.openModal(rawSearch, result)
@@ -295,7 +270,7 @@ const Home = () => {
       if (!amountRef.current) return
 
       amountRef.current.focus()
-      amountRef.current.select()
+      // amountRef.current.select()
     }
 
     const actions: Record<string, () => void> = {
@@ -321,8 +296,8 @@ const Home = () => {
   return (
     <Flex bg="gray.200" h="100vh" justifyContent="space-between" gap={8} p={8}>
       <SearchModal
+        focusInput={focusInput}
         ref={searchModalRef}
-        inputRef={inputRef}
         handleAddProduct={handleAddProduct}
       />
 
