@@ -228,7 +228,13 @@ const DeleteDialog = ({
       <AlertDialogOverlay>
         <AlertDialogContent>
           <AlertDialogHeader>Apagar item</AlertDialogHeader>
-          <AlertDialogBody>Fon</AlertDialogBody>
+          <AlertDialogBody>
+            Realmente deseja apagar o seguinte item?
+            <br />
+            <b>
+              {item.code} - {item.product.name}
+            </b>
+          </AlertDialogBody>
           <AlertDialogFooter>
             <Button
               autoFocus
@@ -350,7 +356,8 @@ const Home = () => {
 
   const selectedItemIndex =
     selectedCode && items.findIndex((item) => item.code === selectedCode)
-  const selectedItem = selectedItemIndex ? items[selectedItemIndex] : undefined
+  const selectedItem =
+    typeof selectedItemIndex === 'number' ? items[selectedItemIndex] : undefined
 
   const focusTable = (useSelectedIndex = false) => {
     const usedIndex = (useSelectedIndex && selectedItemIndex) || 0
