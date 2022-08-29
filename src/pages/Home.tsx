@@ -134,6 +134,7 @@ const SearchModalWithRef: ForwardRefRenderFunction<
     <Modal
       returnFocusOnClose={false}
       trapFocus={false}
+      size="3xl"
       isOpen={isSearchOpen}
       onClose={handleSearchClose}>
       <ModalOverlay />
@@ -305,7 +306,7 @@ const Home = () => {
   const handleAddProduct = (product: Product) => {
     if (!amountRef.current || !inputRef.current) return
 
-    const amountRawValue = '1'
+    const amountRawValue = amountRef.current.getValue()
 
     if (product.isFractioned && !amountRawValue) {
       productRef.current = product
