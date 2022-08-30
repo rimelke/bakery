@@ -15,6 +15,7 @@ import {
   ModalBody,
   ModalCloseButton,
   ModalContent,
+  ModalFooter,
   ModalHeader,
   ModalOverlay,
   Table,
@@ -30,19 +31,15 @@ import {
   forwardRef,
   ForwardRefRenderFunction,
   KeyboardEventHandler,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState
 } from 'react'
 import NumberInput, { NumberInputRef } from '../components/NumberInput'
+import { PaymentMethod } from '../constants/paymentMethods'
 import api from '../services/api'
-
-interface IOrderItem {
-  code: number
-  amount: number
-  subtotal: number
-  product: Product
-}
+import BasicOrderItem from '../types/BasicOrderItem'
 
 interface SearchModalRef {
   openModal: (search: string, products: Product[]) => void
@@ -196,8 +193,8 @@ interface DeleteDialogProps {
   onClose: () => void
   focusTable: (useSelectedIndex?: boolean) => void
   focusInput: () => void
-  item?: IOrderItem
-  deleteItem: (code: number) => void
+  item?: BasicOrderItem
+  deleteItem: (code: string) => void
 }
 
 const DeleteDialog = ({
@@ -268,9 +265,128 @@ const DeleteDialog = ({
   )
 }
 
+interface CloseOrderModalProps {
+  total: number
+  items: BasicOrderItem[]
+  focusInput: () => void
+  resetOrder: () => void
+}
+interface CloseOrderModalRef {
+  open: (method: PaymentMethod) => void
+}
+
+const CloseOrderModalWithRef: ForwardRefRenderFunction<
+  CloseOrderModalRef,
+  CloseOrderModalProps
+> = ({ total, focusInput, items, resetOrder }, ref) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('CARTÃO')
+  const [paymentTotal, setPaymentTotal] = useState<number>()
+
+  useEffect(() => {
+    setPaymentTotal(total)
+  }, [total])
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      open: (method) => {
+        setSelectedMethod(method)
+        setIsOpen(true)
+      }
+    }),
+    []
+  )
+
+  const paymentOver =
+    paymentTotal && paymentTotal > total ? paymentTotal - total : 0
+
+  const onClose = () => {
+    setIsOpen(false)
+    focusInput()
+  }
+
+  const handleSubmit = async () => {
+    await api.orders.createOrder({
+      items,
+      paymentMethod: selectedMethod,
+      paymentTotal: selectedMethod === 'DINHEIRO' ? paymentTotal : undefined
+    })
+
+    onClose()
+    resetOrder()
+  }
+
+  return (
+    <Modal
+      trapFocus={false}
+      returnFocusOnClose={false}
+      isOpen={isOpen}
+      onClose={onClose}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Fechar venda - {selectedMethod}</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody display="flex" flexDir="column" gap={4}>
+          <Flex fontSize="lg" justifyContent="flex-end" gap={8}>
+            <Text>Total</Text>
+            <Text>
+              {total.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+              })}
+            </Text>
+          </Flex>
+
+          {selectedMethod === 'DINHEIRO' && (
+            <>
+              <Flex alignItems="center" gap={8} justifyContent="flex-end">
+                <Text fontSize="lg">Pago</Text>
+                <NumberInput
+                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                  defaultValue={total}
+                  autoFocus
+                  onFocus={(e) => e.target.select()}
+                  onValueChange={(value) => setPaymentTotal(value)}
+                  prefix="R$ "
+                  w={32}
+                  textAlign="end"
+                />
+              </Flex>
+              <Flex
+                fontSize="lg"
+                fontWeight="bold"
+                justifyContent="flex-end"
+                gap={8}>
+                <Text>Troco</Text>
+                <Text>
+                  {paymentOver.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  })}
+                </Text>
+              </Flex>
+            </>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            onClick={handleSubmit}
+            autoFocus={selectedMethod !== 'DINHEIRO'}
+            colorScheme="green">
+            Finalizar
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  )
+}
+
+const CloseOrderModal = forwardRef(CloseOrderModalWithRef)
+
 const Home = () => {
-  const [items, setItems] = useState<IOrderItem[]>([])
-  const [selectedCode, setSelectedCode] = useState<number>()
+  const [items, setItems] = useState<BasicOrderItem[]>([])
+  const [selectedCode, setSelectedCode] = useState<string>()
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
   const codeRef = useRef(1)
@@ -279,6 +395,7 @@ const Home = () => {
   const searchModalRef = useRef<SearchModalRef>(null)
   const productRef = useRef<Product>()
   const tableRef = useRef<HTMLTableElement>(null)
+  const closeOrderModalRef = useRef<CloseOrderModalRef>(null)
 
   const focusInput = () => {
     if (!inputRef.current) return
@@ -297,9 +414,9 @@ const Home = () => {
   }
 
   const addProduct = (product: Product, amount: number) => {
-    const newItem: IOrderItem = {
+    const newItem: BasicOrderItem = {
       product,
-      code: codeRef.current++,
+      code: `${codeRef.current++}`,
       amount,
       subtotal: Math.round(product.price * amount * 100) / 100
     }
@@ -337,13 +454,8 @@ const Home = () => {
 
     if (!rawSearch) return
 
-    const numberSearch = Number(rawSearch)
-
     const result =
-      productRef.current ||
-      (await api.products.getProduct(
-        isNaN(numberSearch) ? rawSearch : numberSearch
-      ))
+      productRef.current || (await api.products.getProduct(rawSearch))
 
     if (result instanceof Array) {
       searchModalRef.current?.openModal(rawSearch, result)
@@ -386,7 +498,10 @@ const Home = () => {
       F2: () => searchModalRef.current?.openModal('', []),
       F5: focusTable,
       Delete: focusTable,
-      Tab: () => {}
+      Tab: () => {},
+      F9: () => closeOrderModalRef.current?.open('CARTÃO'),
+      F10: () => closeOrderModalRef.current?.open('DINHEIRO'),
+      F11: () => closeOrderModalRef.current?.open('PIX')
     }
 
     if (!actions[e.key]) {
@@ -429,8 +544,13 @@ const Home = () => {
     actions[e.key]()
   }
 
-  const deleteItem = (code: number) => {
+  const deleteItem = (code: string) => {
     setItems((prevItems) => prevItems.filter((item) => item.code !== code))
+  }
+
+  const resetOrder = () => {
+    setItems([])
+    clearFields()
   }
 
   const total = items.reduce((acc, item) => acc + item.subtotal, 0)
@@ -451,6 +571,16 @@ const Home = () => {
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
       />
+
+      {items.length > 0 && (
+        <CloseOrderModal
+          resetOrder={resetOrder}
+          items={items}
+          focusInput={focusInput}
+          total={total}
+          ref={closeOrderModalRef}
+        />
+      )}
 
       <Flex flexDir="column" flex={1}>
         <Table

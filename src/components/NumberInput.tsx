@@ -1,5 +1,6 @@
 import { Input, InputProps } from '@chakra-ui/react'
 import {
+  FocusEventHandler,
   forwardRef,
   ForwardRefRenderFunction,
   KeyboardEventHandler,
@@ -12,16 +13,27 @@ import NumberFormat from 'react-number-format'
 interface CustomInputProps {
   props: InputProps
   onKeyDown?: KeyboardEventHandler
+  onFocus?: FocusEventHandler
 }
 
 const CustomInputWithRef: ForwardRefRenderFunction<
   HTMLInputElement,
   CustomInputProps
-> = ({ props: { onKeyDown = () => {}, ...props }, ...customProps }, ref) => (
+> = (
+  {
+    props: { onKeyDown = () => {}, onFocus = () => {}, ...props },
+    ...customProps
+  },
+  ref
+) => (
   <Input
     ref={ref}
     {...props}
     {...customProps}
+    onFocus={(e) => {
+      customProps.onFocus?.(e)
+      onFocus(e)
+    }}
     onKeyDown={(e) => {
       customProps.onKeyDown?.(e)
       onKeyDown(e)
@@ -40,13 +52,18 @@ export interface NumberInputRef {
 
 interface NumberInputProps extends InputProps {
   precision?: number
+  defaultValue?: number
+  onValueChange?: (value?: number) => void
 }
 
 const NumberInputWithRef: ForwardRefRenderFunction<
   NumberInputRef,
   NumberInputProps
-> = ({ precision = 2, ...props }, ref) => {
-  const [value, setValue] = useState<number | string>('')
+> = (
+  { precision = 2, defaultValue, prefix, onValueChange = () => {}, ...props },
+  ref
+) => {
+  const [value, setValue] = useState<number | string>(defaultValue || '')
   const inputRef = useRef<HTMLInputElement>()
 
   useImperativeHandle(
@@ -65,9 +82,10 @@ const NumberInputWithRef: ForwardRefRenderFunction<
       value={value}
       getInputRef={inputRef}
       onValueChange={(values) => {
-        console.log(values)
         setValue(values.floatValue || '')
+        onValueChange(values.floatValue)
       }}
+      prefix={prefix}
       customInput={CustomInput}
       decimalScale={precision}
       decimalSeparator=","

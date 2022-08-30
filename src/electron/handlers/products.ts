@@ -8,8 +8,8 @@ export const getProducts = async () => {
   return products
 }
 
-export const getProduct = async (search: string | number) => {
-  if (typeof search === 'number') {
+export const getProduct = async (search: string) => {
+  if (!/\D/.test(search)) {
     const codeProduct = await prisma.products.findUnique({
       where: { code: search }
     })

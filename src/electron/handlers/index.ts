@@ -1,8 +1,10 @@
 import { ipcMain } from 'electron'
 import * as products from './products'
+import * as orders from './orders'
 
 export const handlers = {
-  products
+  products,
+  orders
 }
 
 export const initHandlers = () => {
