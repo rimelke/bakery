@@ -38,6 +38,7 @@ const CustomInputWithRef: ForwardRefRenderFunction<
       customProps.onKeyDown?.(e)
       onKeyDown(e)
     }}
+    textAlign="end"
   />
 )
 
@@ -47,20 +48,30 @@ export interface NumberInputRef {
   setValue: (value?: number) => void
   focus: () => void
   select: () => void
-  getValue: () => string | undefined
+  getValue: () => number | undefined
 }
 
-interface NumberInputProps extends InputProps {
+export interface NumberInputProps extends InputProps {
   precision?: number
   defaultValue?: number
   onValueChange?: (value?: number) => void
+  suffix?: string
+  value?: number
 }
 
 const NumberInputWithRef: ForwardRefRenderFunction<
   NumberInputRef,
   NumberInputProps
 > = (
-  { precision = 2, defaultValue, prefix, onValueChange = () => {}, ...props },
+  {
+    precision = 2,
+    defaultValue,
+    prefix,
+    onValueChange = () => {},
+    suffix,
+    value: usedValue,
+    ...props
+  },
   ref
 ) => {
   const [value, setValue] = useState<number | string>(defaultValue || '')
@@ -72,17 +83,28 @@ const NumberInputWithRef: ForwardRefRenderFunction<
       setValue: (newValue) => setValue(newValue || ''),
       focus: () => inputRef.current?.focus(),
       select: () => inputRef.current?.select(),
-      getValue: () => inputRef.current?.value
+      getValue: () =>
+        inputRef.current?.value
+          ? Number(
+              inputRef.current.value
+                .replace(prefix || '', '')
+                .replace(suffix || '', '')
+                .replace(',', '.')
+            )
+          : undefined
     }),
     []
   )
 
   return (
     <NumberFormat
-      value={value}
+      value={usedValue ?? value}
       getInputRef={inputRef}
-      onValueChange={(values) => {
+      onValueChange={(values, { source }) => {
         setValue(values.floatValue || '')
+
+        if (source === 'prop') return
+
         onValueChange(values.floatValue)
       }}
       prefix={prefix}
@@ -91,6 +113,7 @@ const NumberInputWithRef: ForwardRefRenderFunction<
       decimalSeparator=","
       fixedDecimalScale
       autoComplete="off"
+      suffix={suffix}
       props={props}
     />
   )

@@ -15,6 +15,8 @@ model products {
   name         String
   code         String       @unique
   price        Float
+  cost         Float
+  profit       Float
   isFractioned Boolean
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @default(now()) @updatedAt
@@ -29,20 +31,26 @@ model orders {
   paymentMethod String
   paymentTotal  Float
   paymentOver   Float?
+  cost          Float
+  profit        Float
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @default(now()) @updatedAt
   orderItems    orderItems[]
 }
 
 model orderItems {
-  id        String    @id
-  orderId   String
-  order     orders    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String?
-  product   products? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  code      String
-  name      String
-  amount    Float
-  price     Float
-  subtotal  Float
+  id          String    @id
+  orderId     String
+  order       orders    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     products? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  code        String
+  name        String
+  amount      Float
+  price       Float
+  subtotal    Float
+  cost        Float
+  costTotal   Float
+  profit      Float
+  profitTotal Float
 }

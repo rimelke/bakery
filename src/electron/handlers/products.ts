@@ -1,5 +1,7 @@
 import { products as Product } from '@prisma/client'
+import genId from '../../utils/genId'
 import normalizeString from '../../utils/normalizeString'
+import roundNumber from '../../utils/roundNumber'
 import prisma from '../prisma'
 
 export const getProducts = async () => {
@@ -33,3 +35,29 @@ export const getProduct = async (search: string) => {
 
 export const deleteProduct = (id: string) =>
   prisma.products.delete({ where: { id } })
+
+export interface CreateProductData {
+  code: string
+  name: string
+  price: number
+  cost: number
+  isFractioned: boolean
+}
+
+export const createProduct = async (data: CreateProductData) => {
+  if (data.price < data.cost) throw new Error('invalid cost')
+
+  const product = await prisma.products.create({
+    data: {
+      code: data.code.trim(),
+      cost: roundNumber(data.cost),
+      isFractioned: data.isFractioned,
+      name: normalizeString(data.name),
+      price: roundNumber(data.price),
+      id: genId(),
+      profit: roundNumber(data.price - data.cost)
+    }
+  })
+
+  return product
+}

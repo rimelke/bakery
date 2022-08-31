@@ -45,6 +45,9 @@ export const createOrder = async ({
   const code = lastOrder ? lastOrder.code + 1 : 1
   const total = items.reduce((acc, item) => acc + item.subtotal, 0)
 
+  let orderCost = 0
+  let orderProfit = 0
+
   const x = await prisma.orders.create({
     data: {
       code,
@@ -55,16 +58,30 @@ export const createOrder = async ({
       total: roundNumber(total),
       paymentOver: paymentTotal ? roundNumber(paymentTotal - total) : null,
       orderItems: {
-        create: items.map((item) => ({
-          id: genId(),
-          amount: roundNumber(item.amount, 3),
-          code: item.product.code,
-          name: item.product.name,
-          price: roundNumber(item.product.price),
-          subtotal: roundNumber(item.subtotal),
-          productId: item.product.id
-        }))
-      }
+        create: items.map((item) => {
+          const costTotal = roundNumber(item.product.cost * item.amount)
+          orderCost += costTotal
+
+          const profitTotal = roundNumber(item.product.profit * item.amount)
+          orderProfit += profitTotal
+
+          return {
+            id: genId(),
+            amount: roundNumber(item.amount, 3),
+            code: item.product.code,
+            name: item.product.name,
+            price: roundNumber(item.product.price),
+            subtotal: roundNumber(item.subtotal),
+            productId: item.product.id,
+            cost: roundNumber(item.product.cost),
+            costTotal,
+            profit: roundNumber(item.product.profit),
+            profitTotal
+          }
+        })
+      },
+      cost: roundNumber(orderCost),
+      profit: roundNumber(orderProfit)
     }
   })
 

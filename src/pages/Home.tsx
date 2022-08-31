@@ -439,10 +439,7 @@ const Home = () => {
       return
     }
 
-    addProduct(
-      product,
-      amountRawValue ? Number(amountRawValue.replace(',', '.')) : 1
-    )
+    addProduct(product, amountRawValue || 1)
   }
 
   const handleSubmit = async () => {
