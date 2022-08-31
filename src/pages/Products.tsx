@@ -29,7 +29,7 @@ import {
 import { products as Product } from '@prisma/client'
 import { useEffect, useRef, useState } from 'react'
 import api from '../services/api'
-import { FiTrash2 } from 'react-icons/fi'
+import { FiEdit, FiTrash2 } from 'react-icons/fi'
 import { Form } from '@unform/web'
 import { FormNumberInput, Input } from '../components/form'
 import NumberInput from '../components/NumberInput'
@@ -97,18 +97,27 @@ const DeleteDialog = ({
 interface AddProductModalProps {
   isOpen: boolean
   onClose: () => void
+  product?: Product
   addProduct: (product: Product) => void
+  updateProduct: (id: string, product: Product) => void
 }
 
-const AddProductModal = ({
+const ProductModal = ({
   isOpen,
   onClose,
-  addProduct
+  addProduct,
+  product,
+  updateProduct
 }: AddProductModalProps) => {
   const [price, setPrice] = useState<number>()
   const [cost, setCost] = useState<number>()
 
   const formRef = useRef<FormHandles>(null)
+
+  useEffect(() => {
+    setCost(product?.cost)
+    setPrice(product?.price)
+  }, [product])
 
   const profit = cost && price ? price - cost : 0
 
@@ -133,17 +142,20 @@ const AddProductModal = ({
 
     const codeUsed = await api.products.getProduct(value.code)
 
-    if (!(codeUsed instanceof Array)) {
+    if (!(codeUsed instanceof Array) && codeUsed.id !== product?.id) {
       formRef.current?.setErrors({ code: 'Código já utilizado' })
 
       return
     }
 
-    const product = await api.products.createProduct(value)
+    const result = product
+      ? await api.products.updateProduct(product.id, value)
+      : await api.products.createProduct(value)
 
     setPrice(undefined)
     setCost(undefined)
-    addProduct(product)
+    if (product) updateProduct(product.id, result)
+    else addProduct(result)
     onClose()
   }
 
@@ -151,10 +163,17 @@ const AddProductModal = ({
     <Modal size="2xl" isOpen={isOpen} onClose={onClose}>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Adicionar produto</ModalHeader>
+        <ModalHeader>
+          {product ? 'Editar' : 'Adicionar'} produto
+          {product && ` - ${product.code} - ${product.name}`}
+        </ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <Form noValidate ref={formRef} onSubmit={handleSubmit}>
+          <Form
+            initialData={product}
+            noValidate
+            ref={formRef}
+            onSubmit={handleSubmit}>
             <Flex flexDir="column" gap={4}>
               <Flex gap={2}>
                 <Input
@@ -216,7 +235,7 @@ const AddProductModal = ({
                 <FormSwitch name="isFractioned" />
               </Flex>
               <Button alignSelf="flex-end" type="submit" colorScheme="green">
-                Adicionar
+                Salvar
               </Button>
             </Flex>
           </Form>
@@ -234,11 +253,7 @@ const Products = () => {
     onClose: onDeleteClose,
     onOpen: onDeleteOpen
   } = useDisclosure()
-  const {
-    isOpen: isAddOpen,
-    onClose: onAddClose,
-    onOpen: onAddOpen
-  } = useDisclosure()
+  const { isOpen, onClose, onOpen } = useDisclosure()
 
   const getProducts = async (search?: string) => {
     const result = await api.products.getProducts(search)
@@ -265,6 +280,20 @@ const Products = () => {
     setProducts((prevProducts) => prevProducts && [product, ...prevProducts])
   }
 
+  const updateProduct = (id: string, product: Product) => {
+    setProducts((prevProducts) => {
+      if (!prevProducts) return
+
+      const index = prevProducts.findIndex(
+        (prevProduct) => prevProduct.id === id
+      )
+
+      if (index > -1) prevProducts[index] = product
+
+      return [...prevProducts]
+    })
+  }
+
   const selectedProduct = products?.find((product) => product.id === selectedId)
 
   return (
@@ -276,14 +305,21 @@ const Products = () => {
         onClose={onDeleteClose}
       />
 
-      <AddProductModal
+      <ProductModal
+        product={selectedProduct}
         addProduct={addProduct}
-        isOpen={isAddOpen}
-        onClose={onAddClose}
+        isOpen={isOpen}
+        updateProduct={updateProduct}
+        onClose={onClose}
       />
 
       <Flex gap={4}>
-        <Button onClick={onAddOpen} colorScheme="green">
+        <Button
+          onClick={() => {
+            setSelectedId(undefined)
+            onOpen()
+          }}
+          colorScheme="green">
           Adicionar
         </Button>
 
@@ -333,6 +369,17 @@ const Products = () => {
               </Td>
               <Td px={4} py={2} isNumeric>
                 <IconButton
+                  onClick={() => {
+                    setSelectedId(product.id)
+                    onOpen()
+                  }}
+                  aria-label="Editar produto"
+                  colorScheme="orange"
+                  size="xs"
+                  icon={<FiEdit />}
+                />
+                <IconButton
+                  ml={2}
                   onClick={() => {
                     setSelectedId(product.id)
                     onDeleteOpen()

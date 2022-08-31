@@ -71,3 +71,28 @@ export const createProduct = async (data: CreateProductData) => {
 
   return product
 }
+
+export type UpdateProductData = Partial<CreateProductData>
+
+export const updateProduct = async (id: string, data: UpdateProductData) => {
+  const product = await prisma.products.findUniqueOrThrow({ where: { id } })
+
+  if ((data.price ?? product.price) < (data.cost ?? product.cost))
+    throw new Error('invalid cost')
+
+  const updatedProduct = await prisma.products.update({
+    where: { id },
+    data: {
+      isFractioned: data.isFractioned,
+      cost: data.cost && roundNumber(data.cost),
+      price: data.price && roundNumber(data.price),
+      name: data.name && normalizeString(data.name),
+      code: data.code?.trim(),
+      profit: roundNumber(
+        (data.price ?? product.price) - (data.cost ?? product.cost)
+      )
+    }
+  })
+
+  return updatedProduct
+}
