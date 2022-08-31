@@ -52,6 +52,7 @@ export interface CreateProductData {
   price: number
   cost: number
   isFractioned: boolean
+  inventory: number
 }
 
 export const createProduct = async (data: CreateProductData) => {
@@ -65,7 +66,8 @@ export const createProduct = async (data: CreateProductData) => {
       name: normalizeString(data.name),
       price: roundNumber(data.price),
       id: genId(),
-      profit: roundNumber(data.price - data.cost)
+      profit: roundNumber(data.price - data.cost),
+      inventory: data.isFractioned ? null : data.inventory
     }
   })
 
@@ -90,7 +92,9 @@ export const updateProduct = async (id: string, data: UpdateProductData) => {
       code: data.code?.trim(),
       profit: roundNumber(
         (data.price ?? product.price) - (data.cost ?? product.cost)
-      )
+      ),
+      inventory:
+        data.isFractioned ?? product.isFractioned ? null : data.inventory
     }
   })
 

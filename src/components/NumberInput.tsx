@@ -57,6 +57,7 @@ export interface NumberInputProps extends InputProps {
   onValueChange?: (value?: number) => void
   suffix?: string
   value?: number
+  allowNegative?: boolean
 }
 
 const NumberInputWithRef: ForwardRefRenderFunction<
@@ -70,6 +71,7 @@ const NumberInputWithRef: ForwardRefRenderFunction<
     onValueChange = () => {},
     suffix,
     value: usedValue,
+    allowNegative = false,
     ...props
   },
   ref
@@ -108,6 +110,7 @@ const NumberInputWithRef: ForwardRefRenderFunction<
         onValueChange(values.floatValue)
       }}
       prefix={prefix}
+      allowNegative={allowNegative}
       customInput={CustomInput}
       decimalScale={precision}
       decimalSeparator=","

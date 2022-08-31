@@ -18,6 +18,7 @@ model products {
   cost         Float
   profit       Float
   isFractioned Boolean
+  inventory    Int?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @default(now()) @updatedAt
   orderItems   orderItems[]

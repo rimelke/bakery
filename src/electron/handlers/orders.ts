@@ -48,42 +48,50 @@ export const createOrder = async ({
   let orderCost = 0
   let orderProfit = 0
 
-  const x = await prisma.orders.create({
-    data: {
-      code,
-      id: genId(),
-      itemsAmount: items.length,
-      paymentMethod,
-      paymentTotal: roundNumber(paymentTotal || total),
-      total: roundNumber(total),
-      paymentOver: paymentTotal ? roundNumber(paymentTotal - total) : null,
-      orderItems: {
-        create: items.map((item) => {
-          const costTotal = roundNumber(item.product.cost * item.amount)
-          orderCost += costTotal
+  await prisma.$transaction([
+    prisma.orders.create({
+      data: {
+        code,
+        id: genId(),
+        itemsAmount: items.length,
+        paymentMethod,
+        paymentTotal: roundNumber(paymentTotal || total),
+        total: roundNumber(total),
+        paymentOver: paymentTotal ? roundNumber(paymentTotal - total) : null,
+        orderItems: {
+          create: items.map((item) => {
+            const costTotal = roundNumber(item.product.cost * item.amount)
+            orderCost += costTotal
 
-          const profitTotal = roundNumber(item.product.profit * item.amount)
-          orderProfit += profitTotal
+            const profitTotal = roundNumber(item.product.profit * item.amount)
+            orderProfit += profitTotal
 
-          return {
-            id: genId(),
-            amount: roundNumber(item.amount, 3),
-            code: item.product.code,
-            name: item.product.name,
-            price: roundNumber(item.product.price),
-            subtotal: roundNumber(item.subtotal),
-            productId: item.product.id,
-            cost: roundNumber(item.product.cost),
-            costTotal,
-            profit: roundNumber(item.product.profit),
-            profitTotal
-          }
+            return {
+              id: genId(),
+              amount: roundNumber(item.amount, 3),
+              code: item.product.code,
+              name: item.product.name,
+              price: roundNumber(item.product.price),
+              subtotal: roundNumber(item.subtotal),
+              productId: item.product.id,
+              cost: roundNumber(item.product.cost),
+              costTotal,
+              profit: roundNumber(item.product.profit),
+              profitTotal
+            }
+          })
+        },
+        cost: roundNumber(orderCost),
+        profit: roundNumber(orderProfit)
+      }
+    }),
+    ...items
+      .filter((item) => !item.product.isFractioned)
+      .map((item) =>
+        prisma.products.update({
+          where: { id: item.product.id },
+          data: { inventory: { decrement: item.amount } }
         })
-      },
-      cost: roundNumber(orderCost),
-      profit: roundNumber(orderProfit)
-    }
-  })
-
-  return x
+      )
+  ])
 }

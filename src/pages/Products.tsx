@@ -112,11 +112,14 @@ const ProductModal = ({
   const [price, setPrice] = useState<number>()
   const [cost, setCost] = useState<number>()
 
+  const [isFractioned, setIsFractioned] = useState(false)
+
   const formRef = useRef<FormHandles>(null)
 
   useEffect(() => {
     setCost(product?.cost)
     setPrice(product?.price)
+    setIsFractioned(product?.isFractioned || false)
   }, [product])
 
   const profit = cost && price ? price - cost : 0
@@ -133,7 +136,15 @@ const ProductModal = ({
           .positive()
           .moreThan(yup.ref('cost'), 'Deve ser maior que o custo')
           .required('Preço é obrigatório'),
-        isFractioned: yup.boolean().required('Obrigatório')
+        isFractioned: yup.boolean().required('Obrigatório'),
+        inventory: yup
+          .number()
+          .integer()
+          .when('isFractioned', {
+            is: true,
+            then: (schema) => schema,
+            otherwise: (schema) => schema.required('Estoque é obrigatório')
+          })
       }),
       formRef.current
     )
@@ -230,10 +241,28 @@ const ProductModal = ({
                   placeholder="Lucro (%)"
                 />
               </Flex>
-              <Flex gap={2} alignItems="center">
-                <Text>Fracionado?</Text>
-                <FormSwitch name="isFractioned" />
+              <Flex gap={8}>
+                <Flex gap={2} alignItems="center">
+                  <Text>Fracionado?</Text>
+                  <FormSwitch
+                    onChange={(e) => setIsFractioned(e.target.checked)}
+                    name="isFractioned"
+                  />
+                </Flex>
+
+                {!isFractioned && (
+                  <Box w={40}>
+                    <FormNumberInput
+                      allowNegative
+                      name="inventory"
+                      precision={0}
+                      isRequired
+                      label="Estoque"
+                    />
+                  </Box>
+                )}
               </Flex>
+
               <Button alignSelf="flex-end" type="submit" colorScheme="green">
                 Salvar
               </Button>
