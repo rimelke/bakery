@@ -23,7 +23,8 @@ import {
   Th,
   Thead,
   Tr,
-  useDisclosure
+  useDisclosure,
+  Input as ChakraInput
 } from '@chakra-ui/react'
 import { products as Product } from '@prisma/client'
 import { useEffect, useRef, useState } from 'react'
@@ -37,6 +38,7 @@ import { CreateProductData } from '../electron/handlers/products'
 import * as yup from 'yup'
 import validateData from '../utils/validateData'
 import { FormHandles } from '@unform/core'
+import useDebounce from '../hooks/useDebounce'
 
 interface DeleteDialogProps {
   isOpen: boolean
@@ -238,14 +240,16 @@ const Products = () => {
     onOpen: onAddOpen
   } = useDisclosure()
 
+  const getProducts = async (search?: string) => {
+    const result = await api.products.getProducts(search)
+
+    setProducts(result)
+    setSelectedId(undefined)
+  }
+
+  const debouncedGetProducts = useDebounce(getProducts)
+
   useEffect(() => {
-    const getProducts = async () => {
-      const result = await api.products.getProducts()
-
-      setProducts(result)
-      setSelectedId(undefined)
-    }
-
     getProducts()
   }, [])
 
@@ -278,10 +282,17 @@ const Products = () => {
         onClose={onAddClose}
       />
 
-      <Flex>
+      <Flex gap={4}>
         <Button onClick={onAddOpen} colorScheme="green">
           Adicionar
         </Button>
+
+        <ChakraInput
+          bg="white"
+          w={60}
+          onChange={(e) => debouncedGetProducts(e.target.value)}
+          placeholder="Pesquise por algo"
+        />
       </Flex>
 
       <Table bg="white" borderRadius="md" overflow="hidden">

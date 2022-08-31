@@ -4,8 +4,18 @@ import normalizeString from '../../utils/normalizeString'
 import roundNumber from '../../utils/roundNumber'
 import prisma from '../prisma'
 
-export const getProducts = async () => {
+export const getProducts = async (search?: string) => {
   const products = await prisma.products.findMany({
+    where: search
+      ? {
+          OR: [
+            {
+              code: { contains: search }
+            },
+            { name: { contains: search } }
+          ]
+        }
+      : {},
     orderBy: { createdAt: 'desc' },
     take: 30
   })
