@@ -3,7 +3,10 @@ import normalizeString from '../../utils/normalizeString'
 import prisma from '../prisma'
 
 export const getProducts = async () => {
-  const products = await prisma.products.findMany()
+  const products = await prisma.products.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 30
+  })
 
   return products
 }
@@ -27,3 +30,6 @@ export const getProduct = async (search: string) => {
 
   return products
 }
+
+export const deleteProduct = (id: string) =>
+  prisma.products.delete({ where: { id } })

@@ -91,7 +91,7 @@ const Orders = () => {
         </Thead>
         <Tbody>
           {orders?.map((order) => (
-            <Tr key={order.id}>
+            <Tr _hover={{ bg: 'cyan.100' }} key={order.id}>
               <Td px={4} py={2} isNumeric>
                 {order.code}
               </Td>
