@@ -556,7 +556,7 @@ const Home = () => {
   const total = items.reduce((acc, item) => acc + item.subtotal, 0)
 
   return (
-    <Flex bg="gray.200" h="100vh" justifyContent="space-between" gap={8} p={8}>
+    <Flex alignItems="flex-start" justifyContent="space-between" gap={8}>
       <SearchModal
         focusInput={focusInput}
         ref={searchModalRef}

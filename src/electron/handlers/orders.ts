@@ -4,6 +4,29 @@ import genId from '../../utils/genId'
 import roundNumber from '../../utils/roundNumber'
 import prisma from '../prisma'
 
+export interface GetOrdersParams {
+  startDate?: string
+  endDate?: string
+  paymentMethod?: PaymentMethod
+}
+
+export const getOrders = ({
+  endDate,
+  paymentMethod,
+  startDate
+}: GetOrdersParams = {}) =>
+  prisma.orders.findMany({
+    where: {
+      paymentMethod,
+      createdAt: {
+        lte: endDate && new Date(endDate),
+        gte: startDate && new Date(startDate)
+      }
+    },
+    take: 30,
+    orderBy: { createdAt: 'desc' }
+  })
+
 interface CreateOrderData {
   items: BasicOrderItem[]
   paymentMethod: PaymentMethod
