@@ -17,6 +17,10 @@ import api from '../services/api'
 
 const Balance = () => {
   const dateTypes = {
+    day: [
+      moment().startOf('day').format(moment.HTML5_FMT.DATETIME_LOCAL),
+      moment().endOf('day').format(moment.HTML5_FMT.DATETIME_LOCAL)
+    ],
     week: [
       moment().startOf('week').format(moment.HTML5_FMT.DATETIME_LOCAL),
       moment().endOf('week').format(moment.HTML5_FMT.DATETIME_LOCAL)
@@ -76,6 +80,9 @@ const Balance = () => {
         />
       </Flex>
       <Flex mt={2} gap={2}>
+        <Button onClick={() => selectType('day')} colorScheme={getColor('day')}>
+          Dia
+        </Button>
         <Button
           onClick={() => selectType('week')}
           colorScheme={getColor('week')}>
