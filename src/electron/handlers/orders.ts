@@ -3,6 +3,7 @@ import BasicOrderItem from '../../types/BasicOrderItem'
 import genId from '../../utils/genId'
 import roundNumber from '../../utils/roundNumber'
 import prisma from '../prisma'
+import { Prisma } from '@prisma/client'
 
 export const getOrder = async (id: string) =>
   prisma.orders.findUnique({
@@ -144,7 +145,17 @@ export const getOrdersBalance = async ({
     }),
     prisma.$queryRaw<
       OrderBalanceItem[]
-    >`select sum(amount) as amount, code, name from orderItems group by code order by amount desc`
+    >`SELECT Sum(i.amount) AS amount, i.code, i.name FROM  orderitems i JOIN orders o ON i.orderId = o.id ${
+      startDate || endDate ? Prisma.sql`WHERE` : Prisma.empty
+    }  ${
+      startDate
+        ? Prisma.sql`o.createdAt >= ${new Date(startDate).getTime()}`
+        : Prisma.empty
+    } ${startDate && endDate ? Prisma.sql`AND` : Prisma.empty} ${
+      endDate
+        ? Prisma.sql`o.createdAt <= ${new Date(endDate).getTime()}`
+        : Prisma.empty
+    } GROUP  BY i.code ORDER  BY amount DESC`
   ])
 
   return {
