@@ -4,6 +4,12 @@ import genId from '../../utils/genId'
 import roundNumber from '../../utils/roundNumber'
 import prisma from '../prisma'
 
+export const getOrder = async (id: string) =>
+  prisma.orders.findUnique({
+    where: { id },
+    include: { orderItems: { orderBy: { itemCode: 'asc' } } }
+  })
+
 export interface GetOrdersParams {
   startDate?: string
   endDate?: string
@@ -59,7 +65,7 @@ export const createOrder = async ({
         total: roundNumber(total),
         paymentOver: paymentTotal ? roundNumber(paymentTotal - total) : null,
         orderItems: {
-          create: items.map((item) => {
+          create: items.map((item, index) => {
             const costTotal = roundNumber(item.product.cost * item.amount)
             orderCost += costTotal
 
@@ -68,6 +74,7 @@ export const createOrder = async ({
 
             return {
               id: genId(),
+              itemCode: index + 1,
               amount: roundNumber(item.amount, 3),
               code: item.product.code,
               name: item.product.name,

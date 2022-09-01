@@ -45,6 +45,7 @@ model orderItems {
   order       orders    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId   String?
   product     products? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  itemCode    Int
   code        String
   name        String
   amount      Float
