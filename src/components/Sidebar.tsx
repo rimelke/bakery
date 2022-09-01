@@ -1,5 +1,5 @@
 import { Button, Flex, Icon, Text } from '@chakra-ui/react'
-import { FiHome, FiAlignLeft, FiArchive } from 'react-icons/fi'
+import { FiHome, FiAlignLeft, FiArchive, FiBarChart } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 
 const Sidebar = () => (
@@ -15,6 +15,10 @@ const Sidebar = () => (
     <Button to="/products" as={Link} py={6} display="flex" flexDir="column">
       <Icon as={FiArchive} />
       <Text>Produtos</Text>
+    </Button>
+    <Button to="/balance" as={Link} py={6} display="flex" flexDir="column">
+      <Icon as={FiBarChart} />
+      <Text>Balanço</Text>
     </Button>
   </Flex>
 )

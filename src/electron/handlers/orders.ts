@@ -102,3 +102,55 @@ export const createOrder = async ({
       )
   ])
 }
+
+export interface GetOrdersBalanceParams {
+  startDate?: string
+  endDate?: string
+}
+
+interface OrderBalanceItem {
+  code: string
+  name: string
+  amount: number
+}
+
+export interface OrdersBalance {
+  ordersAmount: number
+  profitTotal: number
+  ordersTotal: number
+  items: OrderBalanceItem[]
+}
+
+export const getOrdersBalance = async ({
+  endDate,
+  startDate
+}: GetOrdersBalanceParams): Promise<OrdersBalance> => {
+  const [
+    {
+      _count: ordersAmount,
+      _sum: { profit: profitTotal, total: ordersTotal }
+    },
+    items
+  ] = await Promise.all([
+    prisma.orders.aggregate({
+      _count: true,
+      _sum: { total: true, profit: true },
+      where: {
+        createdAt: {
+          lte: endDate ? new Date(endDate) : undefined,
+          gte: startDate ? new Date(startDate) : undefined
+        }
+      }
+    }),
+    prisma.$queryRaw<
+      OrderBalanceItem[]
+    >`select sum(amount) as amount, code, name from orderItems group by code order by amount desc`
+  ])
+
+  return {
+    ordersAmount,
+    profitTotal: profitTotal ?? 0,
+    ordersTotal: ordersTotal ?? 0,
+    items
+  }
+}

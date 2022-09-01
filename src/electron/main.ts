@@ -11,6 +11,7 @@ const main = () => {
     height: 600,
     show: false,
     webPreferences: {
+      devTools: true,
       nodeIntegration: true,
       preload: path.resolve(__dirname, 'preload.js')
     }
