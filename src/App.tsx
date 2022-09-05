@@ -1,6 +1,7 @@
 import { Box, ChakraProvider, extendTheme, Flex } from '@chakra-ui/react'
 import { HashRouter } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
+import { BackupProvider } from './contexts/BackupContext'
 import Routes from './Routes'
 
 const activeLabelStyles = {
@@ -43,14 +44,16 @@ const theme = extendTheme({
 
 const App = () => (
   <ChakraProvider theme={theme}>
-    <HashRouter>
-      <Flex bg="gray.200" minH="100vh" p={4} gap={8}>
-        <Sidebar />
-        <Box flex={1}>
-          <Routes />
-        </Box>
-      </Flex>
-    </HashRouter>
+    <BackupProvider>
+      <HashRouter>
+        <Flex bg="gray.200" minH="100vh" p={4} gap={8}>
+          <Sidebar />
+          <Box flex={1}>
+            <Routes />
+          </Box>
+        </Flex>
+      </HashRouter>
+    </BackupProvider>
   </ChakraProvider>
 )
 
