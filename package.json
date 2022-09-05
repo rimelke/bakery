@@ -78,6 +78,13 @@
   },
   "build": {
     "asar": true,
+    "productName": "Bakery",
+    "win": {
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "icon": "build/icon.png"
+    },
     "asarUnpack": [
       "prisma"
     ],

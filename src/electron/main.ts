@@ -18,19 +18,23 @@ const createWindow = () => {
     width: 800,
     height: 600,
     show: false,
+    icon: path.resolve(__dirname, '..', '..', 'public', 'icon.png'),
     webPreferences: {
-      devTools: true,
       nodeIntegration: true,
       preload: path.resolve(__dirname, 'preload.js')
     }
   })
 
+  win.removeMenu()
   win.loadURL(
     isDev
       ? 'http://localhost:3000'
       : `file://${path.resolve(__dirname, '..', 'index.html')}`
   )
-  win.once('ready-to-show', win.show)
+  win.once('ready-to-show', () => {
+    win.maximize()
+    win.show()
+  })
 
   ipcMain.on('isDev', (e) => (e.returnValue = isDev))
   ipcMain.on('userDataPath', (e) => (e.returnValue = app.getPath('userData')))
