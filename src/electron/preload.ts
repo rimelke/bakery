@@ -32,3 +32,11 @@ contextBridge.exposeInMainWorld('dialog', {
 contextBridge.exposeInMainWorld('makeBackup', (backupPath: string) =>
   ipcRenderer.invoke('makeBackup', backupPath)
 )
+
+contextBridge.exposeInMainWorld('getNotes', () =>
+  ipcRenderer.sendSync('getNotes')
+)
+
+contextBridge.exposeInMainWorld('saveNotes', (data: string) =>
+  ipcRenderer.invoke('saveNotes', data)
+)

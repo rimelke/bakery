@@ -14,5 +14,7 @@ declare global {
       getBackupPath: () => string | undefined
     }
     makeBackup: (backupPath: string) => Promise<void>
+    getNotes: () => string
+    saveNotes: (data: string) => Promise<void>
   }
 }

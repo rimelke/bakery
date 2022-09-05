@@ -57,10 +57,36 @@ const createWindow = () => {
         defaultPath: 'backup.db'
       }))
   )
-  ipcMain.handle('makeBackup', async (_, backupPath) => {
-    await asyncPipe(
-      fs.createReadStream(dbPath),
-      fs.createWriteStream(backupPath)
+  ipcMain.handle('makeBackup', async (_, backupPath: string) => {
+    try {
+      await asyncPipe(
+        fs.createReadStream(dbPath),
+        fs.createWriteStream(backupPath)
+      )
+      await asyncPipe(
+        fs.createReadStream(path.resolve(app.getPath('userData'), 'notes.txt')),
+        fs.createWriteStream(
+          path.resolve(path.dirname(backupPath), 'notes.txt')
+        )
+      )
+    } catch (err) {
+      console.error(err)
+    }
+  })
+  ipcMain.on('getNotes', (e) => {
+    try {
+      e.returnValue = fs.readFileSync(
+        path.resolve(app.getPath('userData'), 'notes.txt'),
+        'utf-8'
+      )
+    } catch (err) {
+      e.returnValue = ''
+    }
+  })
+  ipcMain.handle('saveNotes', async (_, data: string) => {
+    await fsp.writeFile(
+      path.resolve(app.getPath('userData'), 'notes.txt'),
+      data
     )
   })
   initHandlers()
