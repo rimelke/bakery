@@ -97,23 +97,27 @@ const runMigrations = async () => {
   const fileExists = fs.existsSync(dbPath)
 
   if (fileExists) {
-    const runnedMigrations: any[] =
-      await prisma.$queryRaw`SELECT * FROM "_prisma_migrations"`
+    try {
+      const runnedMigrations: any[] =
+        await prisma.$queryRaw`SELECT * FROM "_prisma_migrations"`
 
-    const migrationsDir = path.resolve(
-      app.getAppPath().replace('app.asar', 'app.asar.unpacked'),
-      'prisma',
-      'migrations'
-    )
+      const migrationsDir = path.resolve(
+        app.getAppPath().replace('app.asar', 'app.asar.unpacked'),
+        'prisma',
+        'migrations'
+      )
 
-    console.log('migrationsDir', migrationsDir)
+      console.log('migrationsDir', migrationsDir)
 
-    const files = await fsp.readdir(migrationsDir)
+      const files = await fsp.readdir(migrationsDir)
 
-    files.pop()
-    files.splice(0, runnedMigrations.length)
+      files.pop()
+      files.splice(0, runnedMigrations.length)
 
-    if (files.length === 0) return
+      if (files.length === 0) return
+    } catch (err) {
+      console.error(err)
+    }
   } else fs.closeSync(fs.openSync(dbPath, 'w'))
 
   const schemaPath = path.resolve(

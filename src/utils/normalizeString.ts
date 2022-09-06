@@ -1,7 +1,7 @@
 const normalizeString = (value: string) =>
   value
     .trim()
-    .toUpperCase()
+    .toLowerCase()
     .replace(/[àáâãäåª]+/g, 'a')
     .replace(/[èéêë]+/g, 'e')
     .replace(/[ìíîï]+/g, 'i')
@@ -10,5 +10,6 @@ const normalizeString = (value: string) =>
     .replace(/[ýÿ]+/g, 'y')
     .replace(/[ñ]+/g, 'n')
     .replace(/[ç]+/g, 'c')
+    .toUpperCase()
 
 export default normalizeString

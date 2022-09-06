@@ -39,7 +39,7 @@ const runCommand = async ({
   try {
     const exitCode = await new Promise((resolve) => {
       const prismaPath = path.resolve(
-        app.getAppPath().replace('app.asar', 'app.asar.unpacked'),
+        app.getAppPath(),
         'node_modules/prisma/build/index.js'
       )
 

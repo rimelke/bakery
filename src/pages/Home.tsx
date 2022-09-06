@@ -597,8 +597,11 @@ const Home = () => {
   }
 
   const resetOrder = () => {
+    codeRef.current = 1
     setItems([])
     clearFields()
+    setIsDeleteOpen(false)
+    resetOrderDisclosure.onClose()
   }
 
   const total = items.reduce((acc, item) => acc + item.subtotal, 0)
