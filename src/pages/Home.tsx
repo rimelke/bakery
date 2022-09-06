@@ -1,6 +1,7 @@
 import {
   AlertDialog,
   AlertDialogBody,
+  AlertDialogCloseButton,
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogHeader,
@@ -24,7 +25,8 @@ import {
   Text,
   Th,
   Thead,
-  Tr
+  Tr,
+  useDisclosure
 } from '@chakra-ui/react'
 import { products as Product } from '@prisma/client'
 import {
@@ -384,6 +386,53 @@ const CloseOrderModalWithRef: ForwardRefRenderFunction<
 
 const CloseOrderModal = forwardRef(CloseOrderModalWithRef)
 
+interface ResetDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  resetOrder: () => void
+}
+
+const ResetDialog = ({ isOpen, onClose, resetOrder }: ResetDialogProps) => {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const submitRef = useRef<HTMLButtonElement>(null)
+
+  return (
+    <AlertDialog
+      leastDestructiveRef={cancelRef}
+      isOpen={isOpen}
+      onClose={onClose}>
+      <AlertDialogOverlay />
+
+      <AlertDialogContent>
+        <AlertDialogHeader>Cancelar venda?</AlertDialogHeader>
+        <AlertDialogCloseButton />
+        <AlertDialogFooter>
+          <Button
+            onKeyDown={(e) =>
+              e.key === 'ArrowRight' && submitRef.current?.focus()
+            }
+            tabIndex={0}
+            ref={cancelRef}
+            onClick={onClose}>
+            Não
+          </Button>
+          <Button
+            onKeyDown={(e) =>
+              e.key === 'ArrowLeft' && cancelRef.current?.focus()
+            }
+            tabIndex={1}
+            ref={submitRef}
+            colorScheme="red"
+            onClick={resetOrder}
+            ml={3}>
+            Sim
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 const Home = () => {
   const [items, setItems] = useState<BasicOrderItem[]>([])
   const [selectedCode, setSelectedCode] = useState<string>()
@@ -396,6 +445,7 @@ const Home = () => {
   const productRef = useRef<Product>()
   const tableRef = useRef<HTMLTableElement>(null)
   const closeOrderModalRef = useRef<CloseOrderModalRef>(null)
+  const resetOrderDisclosure = useDisclosure()
 
   const focusInput = () => {
     if (!inputRef.current) return
@@ -498,7 +548,8 @@ const Home = () => {
       Tab: () => {},
       F9: () => closeOrderModalRef.current?.open('CARTÃO'),
       F10: () => closeOrderModalRef.current?.open('DINHEIRO'),
-      F11: () => closeOrderModalRef.current?.open('PIX')
+      F11: () => closeOrderModalRef.current?.open('PIX'),
+      F6: () => items.length > 0 && resetOrderDisclosure.onOpen()
     }
 
     if (!actions[e.key]) {
@@ -570,13 +621,21 @@ const Home = () => {
       />
 
       {items.length > 0 && (
-        <CloseOrderModal
-          resetOrder={resetOrder}
-          items={items}
-          focusInput={focusInput}
-          total={total}
-          ref={closeOrderModalRef}
-        />
+        <>
+          <CloseOrderModal
+            resetOrder={resetOrder}
+            items={items}
+            focusInput={focusInput}
+            total={total}
+            ref={closeOrderModalRef}
+          />
+
+          <ResetDialog
+            isOpen={resetOrderDisclosure.isOpen}
+            onClose={resetOrderDisclosure.onClose}
+            resetOrder={resetOrder}
+          />
+        </>
       )}
 
       <Flex flexDir="column" flex={1}>
