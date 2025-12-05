@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 import { execFile } from 'child_process'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import isDev from 'electron-is-dev'
@@ -10,6 +12,7 @@ import path from 'path'
 import { pipeline } from 'stream'
 import { promisify } from 'util'
 
+import { uploadToS3 } from './aws'
 import { initHandlers } from './handlers'
 import prisma from './prisma'
 import runCommand from './prisma/runCommand'
@@ -63,8 +66,6 @@ const createWindow = () => {
     try {
       await new Promise((resolve, reject) => {
         execFile('sqlite3', [dbPath, `.backup '${backupPath}'`], (error) => {
-          console.log({ error })
-
           if (error) {
             reject(error)
           } else {
@@ -72,12 +73,21 @@ const createWindow = () => {
           }
         })
       })
+
+      const notesBackupPath = path.resolve(
+        path.dirname(backupPath),
+        'notes.txt'
+      )
+
       await asyncPipe(
         fs.createReadStream(path.resolve(app.getPath('userData'), 'notes.txt')),
-        fs.createWriteStream(
-          path.resolve(path.dirname(backupPath), 'notes.txt')
-        )
+        fs.createWriteStream(notesBackupPath)
       )
+
+      const day = new Date().getDate()
+
+      await uploadToS3(backupPath, `backups/${day}/backup.db`)
+      await uploadToS3(notesBackupPath, `backups/${day}/notes.txt`)
     } catch (err) {
       console.error(err)
     }
@@ -140,6 +150,7 @@ const runMigrations = async () => {
 }
 
 const main = async () => {
+  await prisma.$queryRawUnsafe(`PRAGMA journal_mode = WAL;`)
   if (!isDev) await runMigrations()
 
   createWindow()

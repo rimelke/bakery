@@ -28,3 +28,5 @@ package-lock.json
 dev.db
 dev.db-journal
 dist
+dev.db-shm
+dev.db-wal

@@ -1,4 +1,5 @@
 import { createContext, PropsWithChildren, useContext, useEffect } from 'react'
+
 import usePersistedState from '../hooks/usePersistedState'
 
 interface BackupContextData {
@@ -21,7 +22,7 @@ export const BackupProvider = ({ children }: PropsWithChildren<{}>) => {
 
     handleMakeBackup()
 
-    const interval = setInterval(() => handleMakeBackup(), 10 * 60 * 1000)
+    const interval = setInterval(() => handleMakeBackup(), 5 * 60 * 1000)
 
     return () => clearInterval(interval)
   }, [backupPath])
