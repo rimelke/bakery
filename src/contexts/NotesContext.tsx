@@ -1,3 +1,5 @@
+import { createContext, PropsWithChildren, useEffect, useRef } from 'react'
+
 import {
   Modal,
   ModalBody,
@@ -8,7 +10,7 @@ import {
   Textarea,
   useDisclosure
 } from '@chakra-ui/react'
-import { createContext, PropsWithChildren, useEffect, useRef } from 'react'
+
 import useDebounce from '../hooks/useDebounce'
 
 const NotesContext = createContext({})
@@ -19,14 +21,14 @@ export const NotesProvider = ({ children }: PropsWithChildren<{}>) => {
 
   const debouncedSaveNotes = useDebounce(window.saveNotes, 10 * 1000)
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Home') {
-      e.preventDefault()
-      disclosure.onOpen()
-    }
-  }
-
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Home' || e.key === 'F1') {
+        e.preventDefault()
+        disclosure.onOpen()
+      }
+    }
+
     document.addEventListener('keydown', handleKeyDown)
 
     return () => document.removeEventListener('keydown', handleKeyDown)

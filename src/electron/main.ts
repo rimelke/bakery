@@ -1,16 +1,18 @@
+import { execFile } from 'child_process'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import path from 'path'
-import electronReload from 'electron-reload'
-import { initHandlers } from './handlers'
 import isDev from 'electron-is-dev'
+import electronReload from 'electron-reload'
+import Store from 'electron-store'
 import unhandled from 'electron-unhandled'
-import runCommand from './prisma/runCommand'
-import prisma from './prisma'
 import fs from 'fs'
 import fsp from 'fs/promises'
-import Store from 'electron-store'
-import { promisify } from 'util'
+import path from 'path'
 import { pipeline } from 'stream'
+import { promisify } from 'util'
+
+import { initHandlers } from './handlers'
+import prisma from './prisma'
+import runCommand from './prisma/runCommand'
 
 const asyncPipe = promisify(pipeline)
 
@@ -59,10 +61,17 @@ const createWindow = () => {
   )
   ipcMain.handle('makeBackup', async (_, backupPath: string) => {
     try {
-      await asyncPipe(
-        fs.createReadStream(dbPath),
-        fs.createWriteStream(backupPath)
-      )
+      await new Promise((resolve, reject) => {
+        execFile('sqlite3', [dbPath, `.backup '${backupPath}'`], (error) => {
+          console.log({ error })
+
+          if (error) {
+            reject(error)
+          } else {
+            resolve({ success: true, file: backupPath })
+          }
+        })
+      })
       await asyncPipe(
         fs.createReadStream(path.resolve(app.getPath('userData'), 'notes.txt')),
         fs.createWriteStream(
@@ -107,8 +116,6 @@ const runMigrations = async () => {
         'migrations'
       )
 
-      console.log('migrationsDir', migrationsDir)
-
       const files = await fsp.readdir(migrationsDir)
 
       files.pop()
@@ -125,8 +132,6 @@ const runMigrations = async () => {
     'prisma',
     'schema.prisma'
   )
-
-  console.log('schemaPath', schemaPath)
 
   await runCommand({
     command: ['migrate', 'deploy', '--schema', schemaPath],

@@ -1,3 +1,7 @@
+import { useEffect, useRef, useState } from 'react'
+import { FiEdit, FiTrash2 } from 'react-icons/fi'
+import * as yup from 'yup'
+
 import {
   AlertDialog,
   AlertDialogBody,
@@ -10,6 +14,7 @@ import {
   Button,
   Flex,
   IconButton,
+  Input as ChakraInput,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -23,22 +28,19 @@ import {
   Th,
   Thead,
   Tr,
-  useDisclosure,
-  Input as ChakraInput
+  useDisclosure
 } from '@chakra-ui/react'
 import { products as Product } from '@prisma/client'
-import { useEffect, useRef, useState } from 'react'
-import api from '../services/api'
-import { FiEdit, FiTrash2 } from 'react-icons/fi'
-import { Form } from '@unform/web'
-import { FormNumberInput, Input } from '../components/form'
-import NumberInput from '../components/NumberInput'
-import FormSwitch from '../components/form/FormSwitch'
-import { CreateProductData } from '../electron/handlers/products'
-import * as yup from 'yup'
-import validateData from '../utils/validateData'
 import { FormHandles } from '@unform/core'
+import { Form } from '@unform/web'
+
+import { FormNumberInput, Input } from '../components/form'
+import FormSwitch from '../components/form/FormSwitch'
+import NumberInput from '../components/NumberInput'
+import { CreateProductData } from '../electron/handlers/products'
 import useDebounce from '../hooks/useDebounce'
+import api from '../services/api'
+import validateData from '../utils/validateData'
 
 interface DeleteDialogProps {
   isOpen: boolean
@@ -184,7 +186,10 @@ const ProductModal = ({
             initialData={product}
             noValidate
             ref={formRef}
-            onSubmit={handleSubmit}>
+            onSubmit={handleSubmit}
+            placeholder={undefined}
+            onPointerEnterCapture={undefined}
+            onPointerLeaveCapture={undefined}>
             <Flex flexDir="column" gap={4}>
               <Flex gap={2}>
                 <Input

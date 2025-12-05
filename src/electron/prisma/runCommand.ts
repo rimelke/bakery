@@ -34,16 +34,12 @@ const runCommand = async ({
     platformToExecutables[process.platform].migrationEngine
   )
 
-  console.log('mePath', mePath)
-
   try {
     const exitCode = await new Promise((resolve) => {
       const prismaPath = path.resolve(
         app.getAppPath(),
         'node_modules/prisma/build/index.js'
       )
-
-      console.log('prismaPath', prismaPath)
 
       const child = fork(prismaPath, command, {
         env: {

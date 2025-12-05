@@ -1,4 +1,16 @@
 import {
+  forwardRef,
+  ForwardRefRenderFunction,
+  KeyboardEventHandler,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState
+} from 'react'
+import { BsCashCoin } from 'react-icons/bs'
+import { FiCreditCard } from 'react-icons/fi'
+
+import {
   AlertDialog,
   AlertDialogBody,
   AlertDialogCloseButton,
@@ -11,6 +23,7 @@ import {
   Flex,
   FormControl,
   FormLabel,
+  Icon,
   Input,
   Modal,
   ModalBody,
@@ -19,6 +32,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  SimpleGrid,
   Table,
   Tbody,
   Td,
@@ -29,15 +43,8 @@ import {
   useDisclosure
 } from '@chakra-ui/react'
 import { products as Product } from '@prisma/client'
-import {
-  forwardRef,
-  ForwardRefRenderFunction,
-  KeyboardEventHandler,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState
-} from 'react'
+
+import { IconPix } from '../components/custom-icons'
 import NumberInput, { NumberInputRef } from '../components/NumberInput'
 import { PaymentMethod } from '../constants/paymentMethods'
 import api from '../services/api'
@@ -454,6 +461,20 @@ const Home = () => {
     inputRef.current.select()
   }
 
+  useEffect(() => {
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        focusInput()
+      }
+    }
+
+    window.addEventListener('keydown', onEscape)
+
+    return () => {
+      window.removeEventListener('keydown', onEscape)
+    }
+  }, [])
+
   const clearFields = () => {
     if (inputRef.current) inputRef.current.value = ''
     if (amountRef.current) amountRef.current.setValue()
@@ -479,7 +500,7 @@ const Home = () => {
   const handleAddProduct = (product: Product) => {
     if (!amountRef.current || !inputRef.current) return
 
-    const amountRawValue = amountRef.current.getValue()
+    let amountRawValue = amountRef.current.getValue()
 
     if (product.isFractioned && !amountRawValue) {
       productRef.current = product
@@ -487,6 +508,10 @@ const Home = () => {
       amountRef.current.focus()
 
       return
+    }
+
+    if (!product.isFractioned) {
+      amountRawValue = Math.round(amountRawValue || 1)
     }
 
     addProduct(product, amountRawValue || 1)
@@ -527,14 +552,22 @@ const Home = () => {
     tableRef.current.focus()
   }
 
-  const keyDownHandler: KeyboardEventHandler<HTMLInputElement> = (e) => {
-    const focusAmount = () => {
-      if (!amountRef.current) return
+  const focusAmount = () => {
+    if (!amountRef.current) return
 
-      amountRef.current.focus()
-      amountRef.current.select()
+    amountRef.current.focus()
+    amountRef.current.select()
+  }
+
+  const focusNext = () => {
+    if (inputRef.current === document.activeElement) {
+      focusAmount()
+    } else {
+      focusInput()
     }
+  }
 
+  const keyDownHandler: KeyboardEventHandler<HTMLInputElement> = (e) => {
     const actions: Record<string, () => void> = {
       Enter: handleSubmit,
       '*': focusAmount,
@@ -545,7 +578,7 @@ const Home = () => {
       F2: () => searchModalRef.current?.openModal('', []),
       F5: focusTable,
       Delete: focusTable,
-      Tab: () => {},
+      Tab: focusNext,
       F9: () => closeOrderModalRef.current?.open('CARTÃO'),
       F10: () => closeOrderModalRef.current?.open('DINHEIRO'),
       F11: () => closeOrderModalRef.current?.open('PIX'),
@@ -553,7 +586,6 @@ const Home = () => {
     }
 
     if (!actions[e.key]) {
-      console.log(e.key)
       return
     }
 
@@ -703,12 +735,17 @@ const Home = () => {
           </Tbody>
         </Table>
       </Flex>
-      <Flex flexDir="column" justifyContent="space-between" gap={16}>
+      <Flex
+        flexDir="column"
+        justifyContent="space-between"
+        gap={10}
+        pos="sticky"
+        top={4}>
         <Flex flexDir="column" gap={4}>
           <FormControl>
             <FormLabel>Produto</FormLabel>
             <Input
-              onClick={clearFields}
+              onClick={focusInput}
               ref={inputRef}
               bg="white"
               textAlign="end"
@@ -719,7 +756,7 @@ const Home = () => {
           <FormControl>
             <FormLabel>Quantidade</FormLabel>
             <NumberInput
-              onClick={clearFields}
+              onClick={focusAmount}
               placeholder="1,000"
               precision={3}
               textAlign="end"
@@ -746,6 +783,51 @@ const Home = () => {
               currency: 'BRL'
             })}
           </Text>
+        </Flex>
+        {items.length > 0 && (
+          <Flex flexDir="column" gap={4}>
+            <Text>Fechar venda com:</Text>
+            <SimpleGrid columns={2} gap={4}>
+              <Button
+                py={6}
+                display="flex"
+                alignItems="center"
+                gap={1}
+                onClick={() => closeOrderModalRef.current?.open('PIX')}>
+                <Icon as={IconPix} />
+                <Text>Pix</Text>
+              </Button>
+              <Button
+                py={6}
+                display="flex"
+                alignItems="center"
+                gap={1.5}
+                onClick={() => closeOrderModalRef.current?.open('CARTÃO')}>
+                <Icon as={FiCreditCard} />
+                <Text>Cartão</Text>
+              </Button>
+              <Button
+                py={6}
+                display="flex"
+                alignItems="center"
+                gap={1.5}
+                onClick={() => closeOrderModalRef.current?.open('DINHEIRO')}>
+                <Icon as={BsCashCoin} />
+                <Text>Dinheiro</Text>
+              </Button>
+            </SimpleGrid>
+          </Flex>
+        )}
+
+        <Flex flexDir="column" gap={1}>
+          <Text>Atalhos:</Text>
+          <Text fontWeight="bold">F1 / Home - Anotações</Text>
+          <Text fontWeight="bold">F2 - Buscar produto</Text>
+          <Text fontWeight="bold">F5 - Apagar produto</Text>
+          <Text fontWeight="bold">F6 - Cancelar venda</Text>
+          <Text fontWeight="bold">F9 - Fechar venda (Cartão)</Text>
+          <Text fontWeight="bold">F10 - Fechar venda (Dinheiro)</Text>
+          <Text fontWeight="bold">F11 - Fechar venda (Pix)</Text>
         </Flex>
       </Flex>
     </Flex>
