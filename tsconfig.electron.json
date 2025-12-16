@@ -6,7 +6,8 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "outDir": "build"
+    "outDir": "build",
+    "types": ["node"]
   },
   "include": ["src/electron"]
 }
