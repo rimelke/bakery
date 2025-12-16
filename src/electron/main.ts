@@ -1,6 +1,5 @@
 import 'dotenv/config'
 
-import { execFile } from 'child_process'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import isDev from 'electron-is-dev'
@@ -13,7 +12,7 @@ import path from 'path'
 import { pipeline } from 'stream'
 import { promisify } from 'util'
 
-import { db, dbPath } from '../db'
+import { db } from '../db'
 import { uploadToS3 } from './aws'
 import { initHandlers } from './handlers'
 
@@ -61,15 +60,7 @@ const createWindow = () => {
   )
   ipcMain.handle('makeBackup', async (_, backupPath: string) => {
     try {
-      await new Promise((resolve, reject) => {
-        execFile('sqlite3', [dbPath, `.backup '${backupPath}'`], (error) => {
-          if (error) {
-            reject(error)
-          } else {
-            resolve({ success: true, file: backupPath })
-          }
-        })
-      })
+      await db.$client.backup(backupPath)
 
       const notesBackupPath = path.resolve(
         path.dirname(backupPath),
