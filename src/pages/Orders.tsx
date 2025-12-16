@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+
 import {
   Box,
   Flex,
@@ -18,10 +20,10 @@ import {
   Tr,
   useDisclosure
 } from '@chakra-ui/react'
-import { orderItems as OrderItem, orders as Order } from '@prisma/client'
-import { useEffect, useRef, useState } from 'react'
+
 import { GetOrdersParams } from '../electron/handlers/orders'
 import api from '../services/api'
+import { Order, OrderItem } from '../types/order'
 
 interface OrderModalProps {
   isOpen: boolean

@@ -1,4 +1,4 @@
-import { products as Product } from '@prisma/client'
+import { Product } from './product'
 
 interface BasicOrderItem {
   code: string

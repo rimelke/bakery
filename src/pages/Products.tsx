@@ -30,7 +30,6 @@ import {
   Tr,
   useDisclosure
 } from '@chakra-ui/react'
-import { products as Product } from '@prisma/client'
 import { FormHandles } from '@unform/core'
 import { Form } from '@unform/web'
 
@@ -40,6 +39,7 @@ import NumberInput from '../components/NumberInput'
 import { CreateProductData } from '../electron/handlers/products'
 import useDebounce from '../hooks/useDebounce'
 import api from '../services/api'
+import { Product } from '../types/product'
 import validateData from '../utils/validateData'
 
 interface DeleteDialogProps {
@@ -121,7 +121,7 @@ const ProductModal = ({
   useEffect(() => {
     setCost(product?.cost)
     setPrice(product?.price)
-    setIsFractioned(product?.isFractioned || false)
+    setIsFractioned(product ? product.isFractioned === '1' : false)
   }, [product])
 
   const profit = cost && price ? price - cost : 0

@@ -1,14 +1,21 @@
+import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm'
+
 import { PaymentMethod } from '../../constants/paymentMethods'
+import { db } from '../../db'
+import { orderItemSchema, orderSchema, productSchema } from '../../db/schema'
 import BasicOrderItem from '../../types/BasicOrderItem'
+import { OrderItem } from '../../types/order'
 import genId from '../../utils/genId'
 import roundNumber from '../../utils/roundNumber'
-import prisma from '../prisma'
-import { Prisma } from '@prisma/client'
 
 export const getOrder = async (id: string) =>
-  prisma.orders.findUnique({
-    where: { id },
-    include: { orderItems: { orderBy: { itemCode: 'asc' } } }
+  db.query.orderSchema.findFirst({
+    where: eq(orderSchema.id, id),
+    with: {
+      orderItems: {
+        orderBy: asc(orderItemSchema.itemCode)
+      }
+    }
   })
 
 export interface GetOrdersParams {
@@ -22,16 +29,29 @@ export const getOrders = ({
   paymentMethod,
   startDate
 }: GetOrdersParams = {}) =>
-  prisma.orders.findMany({
-    where: {
-      paymentMethod,
-      createdAt: {
-        lte: endDate && new Date(endDate),
-        gte: startDate && new Date(startDate)
-      }
-    },
-    take: 30,
-    orderBy: { createdAt: 'desc' }
+  db.query.orderSchema.findMany({
+    where:
+      paymentMethod || startDate || endDate
+        ? and(
+            paymentMethod
+              ? eq(orderSchema.paymentMethod, paymentMethod)
+              : undefined,
+            startDate
+              ? gte(
+                  orderSchema.createdAt,
+                  new Date(startDate).getTime().toString()
+                )
+              : undefined,
+            endDate
+              ? lte(
+                  orderSchema.createdAt,
+                  new Date(endDate).getTime().toString()
+                )
+              : undefined
+          )
+        : undefined,
+    limit: 30,
+    orderBy: [desc(orderSchema.createdAt)]
   })
 
 interface CreateOrderData {
@@ -47,61 +67,73 @@ export const createOrder = async ({
 }: CreateOrderData) => {
   if (items.length < 1) throw new Error('Items must have at least 1 item')
 
-  const lastOrder = await prisma.orders.findFirst({ orderBy: { code: 'desc' } })
+  const lastOrder = await db.query.orderSchema.findFirst({
+    orderBy: desc(orderSchema.code)
+  })
 
   const code = lastOrder ? lastOrder.code + 1 : 1
-  const total = items.reduce((acc, item) => acc + item.subtotal, 0)
 
+  let total = 0
   let orderCost = 0
   let orderProfit = 0
 
-  await prisma.$transaction([
-    prisma.orders.create({
-      data: {
+  const orderItems: OrderItem[] = []
+
+  const orderId = genId()
+
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index]
+    total += item.subtotal
+
+    const costTotal = roundNumber(item.product.cost * item.amount)
+    orderCost += costTotal
+
+    const profitTotal = roundNumber(item.product.profit * item.amount)
+    orderProfit += profitTotal
+
+    orderItems.push({
+      id: genId(),
+      itemCode: index + 1,
+      amount: roundNumber(item.amount, 3),
+      code: item.product.code,
+      name: item.product.name,
+      price: roundNumber(item.product.price),
+      subtotal: roundNumber(item.subtotal),
+      productId: item.product.id,
+      cost: roundNumber(item.product.cost),
+      costTotal,
+      profit: roundNumber(item.product.profit),
+      profitTotal,
+      orderId
+    })
+  }
+
+  await db.transaction(async (tx) => {
+    await Promise.all([
+      tx.insert(orderSchema).values({
         code,
-        id: genId(),
+        id: orderId,
         itemsAmount: items.length,
         paymentMethod,
         paymentTotal: roundNumber(paymentTotal || total),
         total: roundNumber(total),
         paymentOver: paymentTotal ? roundNumber(paymentTotal - total) : null,
-        orderItems: {
-          create: items.map((item, index) => {
-            const costTotal = roundNumber(item.product.cost * item.amount)
-            orderCost += costTotal
-
-            const profitTotal = roundNumber(item.product.profit * item.amount)
-            orderProfit += profitTotal
-
-            return {
-              id: genId(),
-              itemCode: index + 1,
-              amount: roundNumber(item.amount, 3),
-              code: item.product.code,
-              name: item.product.name,
-              price: roundNumber(item.product.price),
-              subtotal: roundNumber(item.subtotal),
-              productId: item.product.id,
-              cost: roundNumber(item.product.cost),
-              costTotal,
-              profit: roundNumber(item.product.profit),
-              profitTotal
-            }
-          })
-        },
         cost: roundNumber(orderCost),
         profit: roundNumber(orderProfit)
-      }
-    }),
-    ...items
-      .filter((item) => !item.product.isFractioned)
-      .map((item) =>
-        prisma.products.update({
-          where: { id: item.product.id },
-          data: { inventory: { decrement: item.amount } }
+      }),
+      tx.insert(orderItemSchema).values(orderItems),
+      ...items
+        .filter((item) => !item.product.isFractioned)
+        .map(async (item) => {
+          await tx
+            .update(productSchema)
+            .set({
+              inventory: sql`${productSchema.inventory} - ${item.amount}`
+            })
+            .where(eq(productSchema.id, item.product.id))
         })
-      )
-  ])
+    ])
+  })
 }
 
 export interface GetOrdersBalanceParams {
@@ -126,37 +158,44 @@ export const getOrdersBalance = async ({
   endDate,
   startDate
 }: GetOrdersBalanceParams): Promise<OrdersBalance> => {
-  const [
-    {
-      _count: ordersAmount,
-      _sum: { profit: profitTotal, total: ordersTotal }
-    },
-    items
-  ] = await Promise.all([
-    prisma.orders.aggregate({
-      _count: true,
-      _sum: { total: true, profit: true },
-      where: {
-        createdAt: {
-          lte: endDate ? new Date(endDate) : undefined,
-          gte: startDate ? new Date(startDate) : undefined
-        }
-      }
-    }),
-    prisma.$queryRaw<
-      OrderBalanceItem[]
-    >`SELECT Sum(i.amount) AS amount, i.code, i.name FROM  orderitems i JOIN orders o ON i.orderId = o.id ${
-      startDate || endDate ? Prisma.sql`WHERE` : Prisma.empty
-    }  ${
-      startDate
-        ? Prisma.sql`o.createdAt >= ${new Date(startDate).getTime()}`
-        : Prisma.empty
-    } ${startDate && endDate ? Prisma.sql`AND` : Prisma.empty} ${
-      endDate
-        ? Prisma.sql`o.createdAt <= ${new Date(endDate).getTime()}`
-        : Prisma.empty
-    } GROUP  BY i.code ORDER  BY amount DESC`
-  ])
+  const whereClause =
+    startDate || endDate
+      ? and(
+          startDate
+            ? gte(
+                orderSchema.createdAt,
+                new Date(startDate).getTime().toString()
+              )
+            : undefined,
+          endDate
+            ? lte(orderSchema.createdAt, new Date(endDate).getTime().toString())
+            : undefined
+        )
+      : undefined
+
+  const ordersAggregate = db
+    .select({
+      ordersAmount: sql`count(*)`.mapWith(Number),
+      profitTotal: sql`sum(${orderSchema.profit})`.mapWith(Number),
+      ordersTotal: sql`sum(${orderSchema.total})`.mapWith(Number)
+    })
+    .from(orderSchema)
+    .where(whereClause)
+
+  const itemsQuery = db
+    .select({
+      amount: sql`sum(${orderItemSchema.amount})`.mapWith(Number),
+      code: orderItemSchema.code,
+      name: orderItemSchema.name
+    })
+    .from(orderItemSchema)
+    .innerJoin(orderSchema, sql`${orderItemSchema.orderId} = ${orderSchema.id}`)
+    .where(whereClause)
+    .groupBy(orderItemSchema.code)
+    .orderBy(sql`amount DESC`)
+
+  const [[{ ordersAmount, profitTotal, ordersTotal }], items] =
+    await Promise.all([ordersAggregate, itemsQuery])
 
   return {
     ordersAmount,

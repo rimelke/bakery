@@ -42,13 +42,13 @@ import {
   Tr,
   useDisclosure
 } from '@chakra-ui/react'
-import { products as Product } from '@prisma/client'
 
 import { IconPix } from '../components/custom-icons'
 import NumberInput, { NumberInputRef } from '../components/NumberInput'
 import { PaymentMethod } from '../constants/paymentMethods'
 import api from '../services/api'
 import BasicOrderItem from '../types/BasicOrderItem'
+import { Product } from '../types/product'
 
 interface SearchModalRef {
   openModal: (search: string, products: Product[]) => void

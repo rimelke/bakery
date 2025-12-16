@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
-import * as products from './products'
+
 import * as orders from './orders'
+import * as products from './products'
 
 export const handlers = {
   products,

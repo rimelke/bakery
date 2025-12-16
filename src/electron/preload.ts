@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { handlers } from './handlers'
 import Store from 'electron-store'
+
+import { handlers } from './handlers'
 
 const store = new Store()
 

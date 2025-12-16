@@ -1,6 +1,7 @@
 import 'dotenv/config'
 
 import { execFile } from 'child_process'
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import isDev from 'electron-is-dev'
 import electronReload from 'electron-reload'
@@ -12,20 +13,15 @@ import path from 'path'
 import { pipeline } from 'stream'
 import { promisify } from 'util'
 
+import { db, dbPath } from '../db'
 import { uploadToS3 } from './aws'
 import { initHandlers } from './handlers'
-import prisma from './prisma'
-import runCommand from './prisma/runCommand'
 
 const asyncPipe = promisify(pipeline)
 
 unhandled()
 
 electronReload(__dirname, {})
-
-const dbPath = isDev
-  ? path.resolve(__dirname, '..', '..', 'prisma', 'dev.db')
-  : path.resolve(app.getPath('userData'), 'data.db')
 
 const createWindow = () => {
   const win = new BrowserWindow({
@@ -35,7 +31,8 @@ const createWindow = () => {
     icon: path.resolve(__dirname, '..', '..', 'public', 'icon.png'),
     webPreferences: {
       nodeIntegration: true,
-      preload: path.resolve(__dirname, 'preload.js')
+      preload: path.resolve(__dirname, 'preload.js'),
+      contextIsolation: true
     }
   })
 
@@ -112,47 +109,21 @@ const createWindow = () => {
   Store.initRenderer()
 }
 
-const runMigrations = async () => {
-  const fileExists = fs.existsSync(dbPath)
-
-  if (fileExists) {
-    try {
-      const runnedMigrations: any[] =
-        await prisma.$queryRaw`SELECT * FROM "_prisma_migrations"`
-
-      const migrationsDir = path.resolve(
-        app.getAppPath().replace('app.asar', 'app.asar.unpacked'),
-        'prisma',
-        'migrations'
-      )
-
-      const files = await fsp.readdir(migrationsDir)
-
-      files.pop()
-      files.splice(0, runnedMigrations.length)
-
-      if (files.length === 0) return
-    } catch (err) {
-      console.error(err)
-    }
-  } else fs.closeSync(fs.openSync(dbPath, 'w'))
-
-  const schemaPath = path.resolve(
+const runMigrations = () => {
+  const migrationsFolder = path.resolve(
     app.getAppPath().replace('app.asar', 'app.asar.unpacked'),
-    'prisma',
-    'schema.prisma'
+    'drizzle'
   )
 
-  await runCommand({
-    command: ['migrate', 'deploy', '--schema', schemaPath],
-    dbUrl: `file:${dbPath}`
+  db.run('PRAGMA journal_mode=WAL')
+
+  migrate(db, {
+    migrationsFolder
   })
 }
 
-const main = async () => {
-  await prisma.$queryRawUnsafe(`PRAGMA journal_mode = WAL;`)
-  if (!isDev) await runMigrations()
-
+const main = () => {
+  runMigrations()
   createWindow()
 }
 

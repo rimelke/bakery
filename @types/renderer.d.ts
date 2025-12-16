@@ -1,6 +1,6 @@
 import { handlers } from '../src/electron/handlers'
 
-type IApi = typeof handlers
+export type IApi = typeof handlers
 
 declare global {
   // eslint-disable-next-line no-unused-vars

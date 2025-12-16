@@ -1,50 +1,55 @@
-import { products as Product } from '@prisma/client'
+import { desc, eq, like, or } from 'drizzle-orm'
+
+import { db } from '../../db'
+import { productSchema } from '../../db/schema'
+import { Product } from '../../types/product'
 import genId from '../../utils/genId'
 import normalizeString from '../../utils/normalizeString'
 import roundNumber from '../../utils/roundNumber'
-import prisma from '../prisma'
 
 export const getProducts = async (search?: string) => {
-  const products = await prisma.products.findMany({
-    where: search
-      ? {
-          OR: [
-            {
-              code: { contains: search }
-            },
-            { name: { contains: search } }
-          ]
-        }
-      : {},
-    orderBy: { createdAt: 'desc' },
-    take: 30
-  })
+  const products = await db
+    .select()
+    .from(productSchema)
+    .where(
+      search
+        ? or(
+            like(productSchema.code, `%${search}%`),
+            like(productSchema.name, `%${search}%`)
+          )
+        : undefined
+    )
+    .orderBy(desc(productSchema.createdAt))
+    .limit(30)
 
   return products
 }
 
 export const getProduct = async (search: string) => {
   if (!/\D/.test(search)) {
-    const codeProduct = await prisma.products.findUnique({
-      where: { code: search }
-    })
+    const [codeProduct] = await db
+      .select()
+      .from(productSchema)
+      .where(eq(productSchema.code, search))
+      .limit(1)
 
     if (codeProduct) return codeProduct
   }
 
-  const products = await prisma.$queryRaw<
-    Product[]
-  >`SELECT * FROM "products" WHERE "name" LIKE ${`%${normalizeString(
-    search.toString()
-  )
-    .split('')
-    .join('%')}%`} ORDER BY "code"`
+  const normalized = `%${normalizeString(search).split('').join('%')}%`
+
+  const products = await db
+    .select()
+    .from(productSchema)
+    .where(like(productSchema.name, normalized))
+    .orderBy(productSchema.code)
 
   return products
 }
 
-export const deleteProduct = (id: string) =>
-  prisma.products.delete({ where: { id } })
+export const deleteProduct = async (id: string) => {
+  await db.delete(productSchema).where(eq(productSchema.id, id))
+}
 
 export interface CreateProductData {
   code: string
@@ -58,18 +63,19 @@ export interface CreateProductData {
 export const createProduct = async (data: CreateProductData) => {
   if (data.price < data.cost) throw new Error('invalid cost')
 
-  const product = await prisma.products.create({
-    data: {
+  const [product] = await db
+    .insert(productSchema)
+    .values({
+      id: genId(),
       code: data.code.trim(),
-      cost: roundNumber(data.cost),
-      isFractioned: data.isFractioned,
       name: normalizeString(data.name),
       price: roundNumber(data.price),
-      id: genId(),
+      cost: roundNumber(data.cost),
       profit: roundNumber(data.price - data.cost),
-      inventory: data.isFractioned ? null : data.inventory
-    }
-  })
+      inventory: data.isFractioned ? null : data.inventory,
+      isFractioned: (data.isFractioned ? 1 : 0).toString()
+    })
+    .returning()
 
   return product
 }
@@ -77,26 +83,38 @@ export const createProduct = async (data: CreateProductData) => {
 export type UpdateProductData = Partial<CreateProductData>
 
 export const updateProduct = async (id: string, data: UpdateProductData) => {
-  const product = await prisma.products.findUniqueOrThrow({ where: { id } })
+  const [product] = await db
+    .select()
+    .from(productSchema)
+    .where(eq(productSchema.id, id))
+    .limit(1)
 
-  if ((data.price ?? product.price) < (data.cost ?? product.cost))
-    throw new Error('invalid cost')
+  if (!product) throw new Error('product not found')
 
-  const updatedProduct = await prisma.products.update({
-    where: { id },
-    data: {
-      isFractioned: data.isFractioned,
-      cost: data.cost && roundNumber(data.cost),
-      price: data.price && roundNumber(data.price),
-      name: data.name && normalizeString(data.name),
-      code: data.code?.trim(),
-      profit: roundNumber(
-        (data.price ?? product.price) - (data.cost ?? product.cost)
-      ),
-      inventory:
-        data.isFractioned ?? product.isFractioned ? null : data.inventory
-    }
-  })
+  const nextPrice = data.price ?? product.price
+  const nextCost = data.cost ?? product.cost
+
+  if (nextPrice < nextCost) throw new Error('invalid cost')
+
+  const isFractioned = data.isFractioned ?? product.isFractioned
+
+  const newInventory = data.inventory ?? product.inventory
+
+  const updatedProduct: Product = {
+    ...product,
+    isFractioned: (isFractioned ? 1 : 0).toString(),
+    cost: roundNumber(nextCost),
+    price: roundNumber(nextPrice),
+    name: data.name ? normalizeString(data.name) : product.name,
+    code: data.code?.trim() ?? product.code,
+    profit: roundNumber(nextPrice - nextCost),
+    inventory: isFractioned ? null : newInventory
+  }
+
+  await db
+    .update(productSchema)
+    .set(updatedProduct)
+    .where(eq(productSchema.id, id))
 
   return updatedProduct
 }

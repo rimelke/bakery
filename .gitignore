@@ -28,3 +28,4 @@ dev.db-journal
 dist
 dev.db-shm
 dev.db-wal
+.vscode
