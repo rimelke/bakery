@@ -102,8 +102,8 @@ export const createOrder = async ({
 
   const now = new Date()
 
-  db.transaction((tx) => {
-    tx.insert(orderSchema).values({
+  await Promise.all([
+    db.insert(orderSchema).values({
       code,
       id: orderId,
       itemsAmount: items.length,
@@ -115,21 +115,19 @@ export const createOrder = async ({
       profit: roundNumber(orderProfit),
       createdAt: now,
       updatedAt: now
-    })
-    tx.insert(orderItemSchema).values(orderItems)
-
-    for (const item of items) {
-      if (item.product.isFractioned) {
-        continue
-      }
-
-      tx.update(productSchema)
-        .set({
-          inventory: sql`${productSchema.inventory} - ${item.amount}`
-        })
-        .where(eq(productSchema.id, item.product.id))
-    }
-  })
+    }),
+    db.insert(orderItemSchema).values(orderItems),
+    ...items
+      .filter((item) => !item.product.isFractioned)
+      .map((item) =>
+        db
+          .update(productSchema)
+          .set({
+            inventory: sql`${productSchema.inventory} - ${item.amount}`
+          })
+          .where(eq(productSchema.id, item.product.id))
+      )
+  ])
 }
 
 export interface GetOrdersBalanceParams {
