@@ -37,17 +37,9 @@ export const getOrders = ({
               ? eq(orderSchema.paymentMethod, paymentMethod)
               : undefined,
             startDate
-              ? gte(
-                  orderSchema.createdAt,
-                  new Date(startDate).getTime().toString()
-                )
+              ? gte(orderSchema.createdAt, new Date(startDate))
               : undefined,
-            endDate
-              ? lte(
-                  orderSchema.createdAt,
-                  new Date(endDate).getTime().toString()
-                )
-              : undefined
+            endDate ? lte(orderSchema.createdAt, new Date(endDate)) : undefined
           )
         : undefined,
     limit: 30,
@@ -108,31 +100,35 @@ export const createOrder = async ({
     })
   }
 
-  await db.transaction(async (tx) => {
-    await Promise.all([
-      tx.insert(orderSchema).values({
-        code,
-        id: orderId,
-        itemsAmount: items.length,
-        paymentMethod,
-        paymentTotal: roundNumber(paymentTotal || total),
-        total: roundNumber(total),
-        paymentOver: paymentTotal ? roundNumber(paymentTotal - total) : null,
-        cost: roundNumber(orderCost),
-        profit: roundNumber(orderProfit)
-      }),
-      tx.insert(orderItemSchema).values(orderItems),
-      ...items
-        .filter((item) => !item.product.isFractioned)
-        .map(async (item) => {
-          await tx
-            .update(productSchema)
-            .set({
-              inventory: sql`${productSchema.inventory} - ${item.amount}`
-            })
-            .where(eq(productSchema.id, item.product.id))
+  const now = new Date()
+
+  db.transaction((tx) => {
+    tx.insert(orderSchema).values({
+      code,
+      id: orderId,
+      itemsAmount: items.length,
+      paymentMethod,
+      paymentTotal: roundNumber(paymentTotal || total),
+      total: roundNumber(total),
+      paymentOver: paymentTotal ? roundNumber(paymentTotal - total) : null,
+      cost: roundNumber(orderCost),
+      profit: roundNumber(orderProfit),
+      createdAt: now,
+      updatedAt: now
+    })
+    tx.insert(orderItemSchema).values(orderItems)
+
+    for (const item of items) {
+      if (item.product.isFractioned) {
+        continue
+      }
+
+      tx.update(productSchema)
+        .set({
+          inventory: sql`${productSchema.inventory} - ${item.amount}`
         })
-    ])
+        .where(eq(productSchema.id, item.product.id))
+    }
   })
 }
 
@@ -162,14 +158,9 @@ export const getOrdersBalance = async ({
     startDate || endDate
       ? and(
           startDate
-            ? gte(
-                orderSchema.createdAt,
-                new Date(startDate).getTime().toString()
-              )
+            ? gte(orderSchema.createdAt, new Date(startDate))
             : undefined,
-          endDate
-            ? lte(orderSchema.createdAt, new Date(endDate).getTime().toString())
-            : undefined
+          endDate ? lte(orderSchema.createdAt, new Date(endDate)) : undefined
         )
       : undefined
 

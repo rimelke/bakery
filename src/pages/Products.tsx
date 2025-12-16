@@ -121,7 +121,7 @@ const ProductModal = ({
   useEffect(() => {
     setCost(product?.cost)
     setPrice(product?.price)
-    setIsFractioned(product ? product.isFractioned === '1' : false)
+    setIsFractioned(product?.isFractioned ?? false)
   }, [product])
 
   const profit = cost && price ? price - cost : 0

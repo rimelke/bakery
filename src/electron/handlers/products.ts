@@ -63,6 +63,8 @@ export interface CreateProductData {
 export const createProduct = async (data: CreateProductData) => {
   if (data.price < data.cost) throw new Error('invalid cost')
 
+  const now = new Date()
+
   const [product] = await db
     .insert(productSchema)
     .values({
@@ -73,7 +75,9 @@ export const createProduct = async (data: CreateProductData) => {
       cost: roundNumber(data.cost),
       profit: roundNumber(data.price - data.cost),
       inventory: data.isFractioned ? null : data.inventory,
-      isFractioned: (data.isFractioned ? 1 : 0).toString()
+      isFractioned: data.isFractioned,
+      createdAt: now,
+      updatedAt: now
     })
     .returning()
 
@@ -102,7 +106,7 @@ export const updateProduct = async (id: string, data: UpdateProductData) => {
 
   const updatedProduct: Product = {
     ...product,
-    isFractioned: (isFractioned ? 1 : 0).toString(),
+    isFractioned,
     cost: roundNumber(nextCost),
     price: roundNumber(nextPrice),
     name: data.name ? normalizeString(data.name) : product.name,

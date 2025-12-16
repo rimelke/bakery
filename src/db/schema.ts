@@ -1,7 +1,6 @@
-import { relations, sql } from 'drizzle-orm'
+import { relations } from 'drizzle-orm'
 import {
   integer,
-  numeric,
   real,
   sqliteTable,
   text,
@@ -20,12 +19,8 @@ export const orderSchema = sqliteTable(
     paymentOver: real(),
     cost: real().notNull(),
     profit: real().notNull(),
-    createdAt: numeric()
-      .default(sql`(CURRENT_TIMESTAMP)`)
-      .notNull(),
-    updatedAt: numeric()
-      .default(sql`(CURRENT_TIMESTAMP)`)
-      .notNull()
+    createdAt: integer({ mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer({ mode: 'timestamp_ms' }).notNull()
   },
   (table) => [uniqueIndex('orders_code_key').on(table.code)]
 )
@@ -40,12 +35,8 @@ export const productSchema = sqliteTable(
     cost: real().notNull(),
     profit: real().notNull(),
     isFractioned: integer({ mode: 'boolean' }).notNull(),
-    createdAt: numeric()
-      .default(sql`(CURRENT_TIMESTAMP)`)
-      .notNull(),
-    updatedAt: numeric()
-      .default(sql`(CURRENT_TIMESTAMP)`)
-      .notNull(),
+    createdAt: integer({ mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer({ mode: 'timestamp_ms' }).notNull(),
     inventory: integer()
   },
   (table) => [uniqueIndex('products_code_key').on(table.code)]
