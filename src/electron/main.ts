@@ -62,19 +62,24 @@ const createWindow = () => {
     try {
       await db.$client.backup(backupPath)
 
+      const day = new Date().getDate()
+
+      await uploadToS3(backupPath, `backups/${day}/backup.db`)
+
+      const notesPath = path.resolve(app.getPath('userData'), 'notes.txt')
+
+      if (!fs.existsSync(notesPath)) return
+
       const notesBackupPath = path.resolve(
         path.dirname(backupPath),
         'notes.txt'
       )
 
       await asyncPipe(
-        fs.createReadStream(path.resolve(app.getPath('userData'), 'notes.txt')),
+        fs.createReadStream(notesPath),
         fs.createWriteStream(notesBackupPath)
       )
 
-      const day = new Date().getDate()
-
-      await uploadToS3(backupPath, `backups/${day}/backup.db`)
       await uploadToS3(notesBackupPath, `backups/${day}/notes.txt`)
     } catch (err) {
       console.error(err)

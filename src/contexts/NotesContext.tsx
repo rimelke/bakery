@@ -19,7 +19,7 @@ export const NotesProvider = ({ children }: PropsWithChildren<{}>) => {
   const dataRef = useRef(window.getNotes())
   const disclosure = useDisclosure()
 
-  const debouncedSaveNotes = useDebounce(window.saveNotes, 10 * 1000)
+  const debouncedSaveNotes = useDebounce(window.saveNotes, 1 * 1000)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
