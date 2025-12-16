@@ -8,14 +8,17 @@ import normalizeString from '../../utils/normalizeString'
 import roundNumber from '../../utils/roundNumber'
 
 export const getProducts = async (search?: string) => {
+  const normalized =
+    search && `%${normalizeString(search).split('').join('%')}%`
+
   const products = await db
     .select()
     .from(productSchema)
     .where(
-      search
+      normalized
         ? or(
-            like(productSchema.code, `%${search}%`),
-            like(productSchema.name, `%${search}%`)
+            like(productSchema.code, normalized),
+            like(productSchema.name, normalized)
           )
         : undefined
     )
@@ -26,15 +29,13 @@ export const getProducts = async (search?: string) => {
 }
 
 export const getProduct = async (search: string) => {
-  if (!/\D/.test(search)) {
-    const [codeProduct] = await db
-      .select()
-      .from(productSchema)
-      .where(eq(productSchema.code, search))
-      .limit(1)
+  const [codeProduct] = await db
+    .select()
+    .from(productSchema)
+    .where(eq(productSchema.code, search.toUpperCase().trim()))
+    .limit(1)
 
-    if (codeProduct) return codeProduct
-  }
+  if (codeProduct) return codeProduct
 
   const normalized = `%${normalizeString(search).split('').join('%')}%`
 

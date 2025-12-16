@@ -130,7 +130,7 @@ const ProductModal = ({
     const value = await validateData(
       data,
       yup.object().shape({
-        code: yup.string().trim().required('Código é obrigatório'),
+        code: yup.string().uppercase().trim().required('Código é obrigatório'),
         name: yup.string().trim().required('Nome é obrigatório'),
         cost: yup.number().positive().required('Custo é obrigatório'),
         price: yup
@@ -193,13 +193,16 @@ const ProductModal = ({
             <Flex flexDir="column" gap={4}>
               <Flex gap={2}>
                 <Input
-                  onChange={(e) =>
-                    (e.target.value = e.target.value.replace(/\D/g, ''))
-                  }
                   isRequired
                   label="Código"
                   flex={1}
                   name="code"
+                  onChange={(e) =>
+                    (e.target.value = e.target.value
+                      .trim()
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, ''))
+                  }
                 />
                 <Input isRequired label="Nome" flex={2} name="name" />
               </Flex>
