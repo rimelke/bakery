@@ -20,7 +20,8 @@ export const orderSchema = sqliteTable(
     cost: real().notNull(),
     profit: real().notNull(),
     createdAt: integer({ mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer({ mode: 'timestamp_ms' }).notNull()
+    updatedAt: integer({ mode: 'timestamp_ms' }).notNull(),
+    deletedAt: integer({ mode: 'timestamp_ms' })
   },
   (table) => [uniqueIndex('orders_code_key').on(table.code)]
 )

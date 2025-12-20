@@ -1,4 +1,14 @@
-import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  isNotNull,
+  isNull,
+  lte,
+  sql
+} from 'drizzle-orm'
 
 import { PaymentMethod } from '../../constants/paymentMethods'
 import { db } from '../../db'
@@ -22,26 +32,24 @@ export interface GetOrdersParams {
   startDate?: string
   endDate?: string
   paymentMethod?: PaymentMethod
+  showDeleted?: boolean
 }
 
 export const getOrders = ({
   endDate,
   paymentMethod,
-  startDate
+  startDate,
+  showDeleted
 }: GetOrdersParams = {}) =>
   db.query.orderSchema.findMany({
-    where:
-      paymentMethod || startDate || endDate
-        ? and(
-            paymentMethod
-              ? eq(orderSchema.paymentMethod, paymentMethod)
-              : undefined,
-            startDate
-              ? gte(orderSchema.createdAt, new Date(startDate))
-              : undefined,
-            endDate ? lte(orderSchema.createdAt, new Date(endDate)) : undefined
-          )
-        : undefined,
+    where: and(
+      showDeleted
+        ? isNotNull(orderSchema.deletedAt)
+        : isNull(orderSchema.deletedAt),
+      paymentMethod ? eq(orderSchema.paymentMethod, paymentMethod) : undefined,
+      startDate ? gte(orderSchema.createdAt, new Date(startDate)) : undefined,
+      endDate ? lte(orderSchema.createdAt, new Date(endDate)) : undefined
+    ),
     limit: 30,
     orderBy: [desc(orderSchema.createdAt)]
   })
@@ -152,15 +160,11 @@ export const getOrdersBalance = async ({
   endDate,
   startDate
 }: GetOrdersBalanceParams): Promise<OrdersBalance> => {
-  const whereClause =
-    startDate || endDate
-      ? and(
-          startDate
-            ? gte(orderSchema.createdAt, new Date(startDate))
-            : undefined,
-          endDate ? lte(orderSchema.createdAt, new Date(endDate)) : undefined
-        )
-      : undefined
+  const whereClause = and(
+    isNull(orderSchema.deletedAt),
+    startDate ? gte(orderSchema.createdAt, new Date(startDate)) : undefined,
+    endDate ? lte(orderSchema.createdAt, new Date(endDate)) : undefined
+  )
 
   const ordersAggregate = db
     .select({
@@ -192,4 +196,18 @@ export const getOrdersBalance = async ({
     ordersTotal: ordersTotal ?? 0,
     items
   }
+}
+
+export const deleteOrder = async (id: string) => {
+  await db
+    .update(orderSchema)
+    .set({ deletedAt: new Date() })
+    .where(eq(orderSchema.id, id))
+}
+
+export const restoreOrder = async (id: string) => {
+  await db
+    .update(orderSchema)
+    .set({ deletedAt: null })
+    .where(eq(orderSchema.id, id))
 }
