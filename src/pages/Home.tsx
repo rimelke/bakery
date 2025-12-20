@@ -582,7 +582,7 @@ const Home = () => {
       F9: () => closeOrderModalRef.current?.open('CARTÃO'),
       F10: () => closeOrderModalRef.current?.open('DINHEIRO'),
       F11: () => closeOrderModalRef.current?.open('PIX'),
-      F6: () => items.length > 0 && resetOrderDisclosure.onOpen()
+      F6: () => codeRef.current > 1 && resetOrderDisclosure.onOpen()
     }
 
     if (!actions[e.key]) {
