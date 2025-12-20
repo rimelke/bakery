@@ -56,13 +56,14 @@ export interface CreateProductData {
   code: string
   name: string
   price: number
-  cost: number
+  cost?: number
   isFractioned: boolean
   inventory: number
 }
 
 export const createProduct = async (data: CreateProductData) => {
-  if (data.price < data.cost) throw new Error('invalid cost')
+  if (typeof data.cost === 'number' && data.price < data.cost)
+    throw new Error('invalid cost')
 
   const now = new Date()
 
@@ -73,8 +74,11 @@ export const createProduct = async (data: CreateProductData) => {
       code: data.code.trim(),
       name: normalizeString(data.name),
       price: roundNumber(data.price),
-      cost: roundNumber(data.cost),
-      profit: roundNumber(data.price - data.cost),
+      cost: typeof data.cost === 'number' ? roundNumber(data.cost) : null,
+      profit:
+        typeof data.cost === 'number'
+          ? roundNumber(data.price - data.cost)
+          : null,
       inventory: data.isFractioned ? null : data.inventory,
       isFractioned: data.isFractioned,
       createdAt: now,
@@ -97,9 +101,9 @@ export const updateProduct = async (id: string, data: UpdateProductData) => {
   if (!product) throw new Error('product not found')
 
   const nextPrice = data.price ?? product.price
-  const nextCost = data.cost ?? product.cost
 
-  if (nextPrice < nextCost) throw new Error('invalid cost')
+  if (typeof data.cost === 'number' && nextPrice < data.cost)
+    throw new Error('invalid cost')
 
   const isFractioned = data.isFractioned ?? product.isFractioned
 
@@ -107,12 +111,14 @@ export const updateProduct = async (id: string, data: UpdateProductData) => {
 
   const updatedProduct: Product = {
     ...product,
+    updatedAt: new Date(),
     isFractioned,
-    cost: roundNumber(nextCost),
+    cost: typeof data.cost === 'number' ? roundNumber(data.cost) : null,
     price: roundNumber(nextPrice),
     name: data.name ? normalizeString(data.name) : product.name,
     code: data.code?.trim() ?? product.code,
-    profit: roundNumber(nextPrice - nextCost),
+    profit:
+      typeof data.cost === 'number' ? roundNumber(nextPrice - data.cost) : null,
     inventory: isFractioned ? null : newInventory
   }
 

@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react'
+
 import { FormControl, FormErrorMessage, FormLabel } from '@chakra-ui/react'
 import { useField } from '@unform/core'
-import { useEffect, useRef } from 'react'
+
 import NumberInput, { NumberInputProps, NumberInputRef } from '../NumberInput'
 
 interface FormNumberInputProps extends NumberInputProps {
@@ -37,7 +39,7 @@ const FormNumberInput = ({
         placeholder=" "
         onFocus={clearError}
         ref={ref}
-        defaultValue={defaultValue}
+        defaultValue={defaultValue?.toString?.()}
       />
       {label && <FormLabel>{label}</FormLabel>}
 

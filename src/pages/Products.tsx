@@ -119,7 +119,7 @@ const ProductModal = ({
   const formRef = useRef<FormHandles>(null)
 
   useEffect(() => {
-    setCost(product?.cost)
+    setCost(product?.cost ?? undefined)
     setPrice(product?.price)
     setIsFractioned(product?.isFractioned ?? false)
   }, [product])
@@ -132,12 +132,20 @@ const ProductModal = ({
       yup.object().shape({
         code: yup.string().uppercase().trim().required('Código é obrigatório'),
         name: yup.string().trim().required('Nome é obrigatório'),
-        cost: yup.number().positive().required('Custo é obrigatório'),
+        cost: yup.number().positive(),
         price: yup
           .number()
           .positive()
-          .moreThan(yup.ref('cost'), 'Deve ser maior que o custo')
-          .required('Preço é obrigatório'),
+          .required('Preço é obrigatório')
+          .when('cost', {
+            is: (cost: number) => typeof cost === 'number',
+            then: (schema) =>
+              schema.moreThan(
+                yup.ref('cost'),
+                'O preço deve ser maior que o custo'
+              ),
+            otherwise: (schema) => schema
+          }),
         isFractioned: yup.boolean().required('Obrigatório'),
         inventory: yup
           .number()
@@ -224,7 +232,6 @@ const ProductModal = ({
                   prefix="R$ "
                   label="Custo"
                   name="cost"
-                  isRequired
                   w={40}
                 />
                 <NumberInput

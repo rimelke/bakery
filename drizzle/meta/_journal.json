@@ -15,6 +15,13 @@
       "when": 1766251266498,
       "tag": "0001_even_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1766252597704,
+      "tag": "0002_lovely_vance_astro",
+      "breakpoints": true
     }
   ]
 }

@@ -85,11 +85,18 @@ export const createOrder = async ({
     const item = items[index]
     total += item.subtotal
 
-    const costTotal = roundNumber(item.product.cost * item.amount)
-    orderCost += costTotal
+    let costTotal: number | null = null
 
-    const profitTotal = roundNumber(item.product.profit * item.amount)
-    orderProfit += profitTotal
+    if (typeof item.product.cost === 'number') {
+      costTotal = roundNumber(item.product.cost * item.amount)
+      orderCost += costTotal
+    }
+
+    let profitTotal: number | null = null
+    if (typeof item.product.profit === 'number') {
+      profitTotal = roundNumber(item.product.profit * item.amount)
+      orderProfit += profitTotal
+    }
 
     orderItems.push({
       id: genId(),
@@ -100,9 +107,15 @@ export const createOrder = async ({
       price: roundNumber(item.product.price),
       subtotal: roundNumber(item.subtotal),
       productId: item.product.id,
-      cost: roundNumber(item.product.cost),
+      cost:
+        typeof item.product.cost === 'number'
+          ? roundNumber(item.product.cost)
+          : null,
       costTotal,
-      profit: roundNumber(item.product.profit),
+      profit:
+        typeof item.product.profit === 'number'
+          ? roundNumber(item.product.profit)
+          : null,
       profitTotal,
       orderId
     })

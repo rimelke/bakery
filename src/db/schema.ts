@@ -33,8 +33,8 @@ export const productSchema = sqliteTable(
     name: text().notNull(),
     code: text().notNull(),
     price: real().notNull(),
-    cost: real().notNull(),
-    profit: real().notNull(),
+    cost: real(),
+    profit: real(),
     isFractioned: integer({ mode: 'boolean' }).notNull(),
     createdAt: integer({ mode: 'timestamp_ms' }).notNull(),
     updatedAt: integer({ mode: 'timestamp_ms' }).notNull(),
@@ -61,10 +61,10 @@ export const orderItemSchema = sqliteTable('orderItems', {
   amount: real().notNull(),
   price: real().notNull(),
   subtotal: real().notNull(),
-  cost: real().notNull(),
-  costTotal: real().notNull(),
-  profit: real().notNull(),
-  profitTotal: real().notNull()
+  cost: real(),
+  costTotal: real(),
+  profit: real(),
+  profitTotal: real()
 })
 
 export const orderItemsRelations = relations(orderItemSchema, ({ one }) => ({
